@@ -1,0 +1,859 @@
+{% load static %} <!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 입력 테이블 (데이터 로딩 포함)</title>
+    <style>
+        body {
+            font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border: 1px solid #a0a0a0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 98%; 
+            max-width: 1800px; 
+            border-radius: 4px;
+        }
+
+        h1 {
+            font-size: 1.3em;
+            color: #333333;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 10px;
+        }
+
+        .settings-area, .filter-area { 
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        
+        .filter-area legend, .settings-area legend { 
+            font-weight: bold;
+            font-size: 1em; 
+            color: #333;
+            padding: 0 5px; 
+            margin-bottom: 10px;
+        }
+
+        .settings-layout {
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 20px; 
+        }
+        .settings-column {
+            flex: 1; 
+            min-width: 320px; 
+            display: flex;
+            flex-direction: column;
+            gap: 15px; 
+        }
+        #channel-settings-column {
+            align-items: center; 
+        }
+        #channelDetailsContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%; 
+            gap: 8px; 
+        }
+        
+        #dsi-settings-column { }
+        .dsi-dist-layout { 
+            display: flex;
+            flex-direction: row; 
+            gap: 20px; 
+            width: 100%;
+        }
+        .dsi-dist-sub-column { 
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px; 
+        }
+        .sub-column-title {
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .settings-group {
+            display: flex;
+            gap: 8px; 
+            align-items: center;
+            flex-wrap: nowrap; 
+        }
+        #numChannelsGroup, #channelDetailsContainer .settings-group {
+             width: fit-content;
+        }
+        .dsi-dist-sub-column .settings-group { 
+            width: 100%; 
+        }
+
+        .settings-group label {
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 5px;
+            white-space: nowrap; 
+            flex-shrink: 0; 
+            text-align: left; 
+        }
+        .settings-group input[type="number"],
+        .settings-group input[type="text"] { 
+            padding: 5px;
+            font-size: 0.9em;
+            border: 1px solid #b0b0b0;
+            border-radius: 3px;
+        }
+        .settings-group input[type="number"]#numChannels { 
+            width: 60px;
+            flex-grow: 0; 
+        }
+         #channelDetailsContainer .settings-group input[type="text"].channel-detail-input,
+         #channelDetailsContainer .settings-group input[type="number"].channel-detail-input { 
+            width: 100px; 
+            flex-grow: 0; 
+        }
+        
+        #dsi-master-list .settings-group label {
+            width: 180px; 
+        }
+        #dist-master-list .settings-group label {
+             width: 220px; 
+        }
+        
+        .dsi-dist-sub-column .settings-group input[type="text"],
+        .dsi-dist-sub-column .settings-group input[type="number"] {
+            width: 100px; 
+            flex-grow: 0; 
+        }
+
+        #channelDetailsContainer .channel-input-group label { 
+            font-weight: normal;
+            font-size: 0.85em;
+            min-width: 70px; 
+        }
+
+        .checkbox-group { 
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 10px 15px; 
+        }
+        .checkbox-item { 
+            display: flex;
+            align-items: center;
+            font-size: 0.85em; 
+        }
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #c0c0c0;
+            table-layout: fixed; 
+        }
+
+        th, td {
+            border: 1px solid #c0c0c0;
+            padding: 5px 7px; 
+            font-size: 0.7em; 
+            overflow-wrap: break-word; 
+            word-wrap: break-word;     
+        }
+
+        th {
+            background-color: #e0e0e0;
+            color: #333333;
+            font-weight: bold;
+            text-align: center; 
+            position: sticky; 
+            top: 0;          
+            z-index: 2; 
+        }
+        
+        td {
+             text-align: center; 
+        }
+
+        th:nth-child(1), td:nth-child(1), 
+        th:nth-child(2), td:nth-child(2)
+        {
+            width: 90px; 
+        }
+
+        tbody tr:nth-child(even) { 
+            background-color: #f9f9f9;
+        }
+        
+        tbody tr.bg-right-touch, tbody tr.bg-right-touch:nth-child(even)  { background-color: #add8e6; } 
+        tbody tr.bg-right-tilt, tbody tr.bg-right-tilt:nth-child(even)   { background-color: #90ee90; } 
+        tbody tr.bg-left-touch, tbody tr.bg-left-touch:nth-child(even)   { background-color: #ffcc99; } 
+        tbody tr.bg-left-tilt, tbody tr.bg-left-tilt:nth-child(even)    { background-color: #ffffcc; } 
+        tbody tr.bg-rear, tbody tr.bg-rear:nth-child(even)                { background-color: #ffcccb; } 
+        tbody tr.bg-front, tbody tr.bg-front:nth-child(even)              { background-color: #e6e6fa; } 
+        tbody tr.bg-top, tbody tr.bg-top:nth-child(even)                  { background-color: #add8e6; } 
+        tbody tr.bg-left, tbody tr.bg-left:nth-child(even)                { background-color: #90ee90; } 
+        tbody tr.bg-right, tbody tr.bg-right:nth-child(even)              { background-color: #ffcc99; } 
+        tbody tr.bg-bottom, tbody tr.bg-bottom:nth-child(even)            { background-color: #ffffcc; } 
+
+        tbody tr:hover {
+            background-color: #e0e0e0 !important; 
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        select { 
+            width: 100%; 
+            padding: 4px; 
+            border: 1px solid #b0b0b0;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 1em; 
+            background-color: #fff; 
+            text-align: center; 
+        }
+        select {
+             text-align: left; 
+        }
+        input[type="date"] {
+            text-align: left; 
+            padding: 4px 3px; 
+        }
+        input[readonly] { 
+            background-color: #f0f0f0; 
+            cursor: not-allowed;
+        }
+        
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus:not([readonly]), 
+        select:focus { 
+            border-color: #0078d4;
+            outline: none;
+            box-shadow: 0 0 0 1px #0078d4;
+        }
+
+        .actions {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 7px 12px; 
+            background-color: #0078d4;
+            color: white;
+            border: 1px solid #005a9e;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em; 
+        }
+        button:hover {
+            background-color: #005a9e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>데이터 입력 및 정리 테이블</h1>
+        {% csrf_token %} 
+
+        <div class="settings-area">
+            <div class="settings-layout"> 
+                <div class="settings-column" id="channel-settings-column"> 
+                    <div class="settings-group" id="numChannelsGroup">
+                        <label for="numChannels">채널 개수 (1-6):</label>
+                        <input type="number" id="numChannels" name="numChannels" min="1" max="6" value="1">
+                    </div>
+                    <div id="channelDetailsContainer"></div>
+                </div>
+                <div class="settings-column" id="dsi-dist-column"> 
+                    <div class="dsi-dist-layout">
+                        <div id="dsi-master-list" class="dsi-dist-sub-column">
+                            <p class="sub-column-title">DSI 설정</p>
+                            <div class="settings-group">
+                                <label for="dsi_input_head">Head DSI:</label>
+                                <input type="text" id="dsi_input_head" class="dsi-input" placeholder="DSI">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dsi_input_bodyworn">Body-worn DSI:</label>
+                                <input type="text" id="dsi_input_bodyworn" class="dsi-input" placeholder="DSI">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dsi_input_hotspot">Hotspot DSI:</label>
+                                <input type="text" id="dsi_input_hotspot" class="dsi-input" placeholder="DSI">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dsi_input_ps10gmax">P.S. 10g Max DSI:</label>
+                                <input type="text" id="dsi_input_ps10gmax" class="dsi-input" placeholder="DSI">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dsi_input_ps10greduce">P.S. 10g Reduce DSI:</label>
+                                <input type="text" id="dsi_input_ps10greduce" class="dsi-input" placeholder="DSI">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dsi_input_handsar">Hand SAR DSI:</label>
+                                <input type="text" id="dsi_input_handsar" class="dsi-input" placeholder="DSI">
+                            </div>
+                        </div>
+                        <div id="dist-master-list" class="dsi-dist-sub-column">
+                            <p class="sub-column-title">Dist. (mm) 설정</p>
+                            <div class="settings-group">
+                                <label for="dist_input_head">Head Dist.(mm):</label>
+                                <input type="number" id="dist_input_head" class="dist-input" value="0" readonly>
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_bodyworn">Body-worn Dist.(mm):</label>
+                                <input type="number" id="dist_input_bodyworn" class="dist-input" step="any" placeholder="mm">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_hotspot">Hotspot Dist.(mm):</label>
+                                <input type="number" id="dist_input_hotspot" class="dist-input" step="any" placeholder="mm">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_ps10gmax">P.S. 10g Max Dist.(mm):</label>
+                                <input type="number" id="dist_input_ps10gmax" class="dist-input" step="any" placeholder="mm">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_ps10greduce">P.S. 10g Reduce Dist.(mm):</label>
+                                <input type="number" id="dist_input_ps10greduce" class="dist-input" step="any" placeholder="mm">
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_handsar">Hand SAR Dist.(mm):</label>
+                                <input type="number" id="dist_input_handsar" class="dist-input" value="0" readonly>
+                            </div>
+                            <div class="settings-group">
+                                <label for="dist_input_handsar_rear">Hand SAR Rear Dist.(mm):</label>
+                                <input type="number" id="dist_input_handsar_rear" class="dist-input" step="any" placeholder="mm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <fieldset class="filter-area">
+            <legend>RF Exposure Condition 필터</legend>
+            <div class="checkbox-group" id="rfConditionFilterGroup">
+                <div class="checkbox-item"><input type="checkbox" id="rf_head" name="rf_condition_filter" value="Head"><label for="rf_head">Head</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_bodyworn" name="rf_condition_filter" value="Body-worn"><label for="rf_bodyworn">Body-worn</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_hotspot" name="rf_condition_filter" value="Hotspot"><label for="rf_hotspot">Hotspot</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_ps10gmax" name="rf_condition_filter" value="Product specific 10-g Max"><label for="rf_ps10gmax">P.S. 10-g Max</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_ps10greduce" name="rf_condition_filter" value="Product specific 10-g Reduce"><label for="rf_ps10greduce">P.S. 10-g Reduce</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_handsar" name="rf_condition_filter" value="Hand SAR"><label for="rf_handsar">Hand SAR</label></div>
+            </div>
+        </fieldset>
+
+        <fieldset class="filter-area">
+            <legend>Test Position 필터</legend>
+            <div class="checkbox-group" id="testPositionFilterGroup">
+                <div class="checkbox-item"><input type="checkbox" id="pos_rtouch" name="test_position_filter" value="Right Touch" checked><label for="pos_rtouch">Right Touch</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_rtilt" name="test_position_filter" value="Right Tilt" checked><label for="pos_rtilt">Right Tilt</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_ltouch" name="test_position_filter" value="Left Touch" checked><label for="pos_ltouch">Left Touch</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_ltilt" name="test_position_filter" value="Left Tilt" checked><label for="pos_ltilt">Left Tilt</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_rear" name="test_position_filter" value="Rear" checked><label for="pos_rear">Rear</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_front" name="test_position_filter" value="Front" checked><label for="pos_front">Front</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_top" name="test_position_filter" value="Top" checked><label for="pos_top">Top</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_left" name="test_position_filter" value="Left" checked><label for="pos_left">Left</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_right" name="test_position_filter" value="Right" checked><label for="pos_right">Right</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="pos_bottom" name="test_position_filter" value="Bottom" checked><label for="pos_bottom">Bottom</label></div>
+            </div>
+        </fieldset>
+
+        <table id="dataTable">
+             <thead>
+                <tr>
+                    <th>System Check Date</th><th>Test Date</th><th>Tested By</th><th>Sample no.</th><th>SAR Lab.</th>
+                    <th>RF Exposure conditions</th><th>Mode</th><th>DSI</th><th>Dist. (mm)</th><th>Test Position</th>
+                    <th>Ch#</th><th>Freq. (MHz)</th><th>Tune-up Limit</th><th>Meas.</th><th>1-g SAR Meas</th>
+                    <th>1-g SAR Scaled</th><th>10-g SAR Meas</th><th>10-g SAR Scaled</th><th>Step Size (mm)</th>
+                    <th>Dis 3dB Peak (mm)</th><th>Z-axis Ratio (%)</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody"></tbody>
+        </table>
+        <div class="actions">
+            <button type="button" id="saveButton">저장</button>
+        </div>
+    </div>
+
+    {{ initial_sar_data|json_script:"initial-sar-data" }}
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const numChannelsInput = document.getElementById('numChannels');
+            const channelDetailsContainer = document.getElementById('channelDetailsContainer');
+            const rfConditionFilterCheckboxes = document.querySelectorAll('input[name="rf_condition_filter"]');
+            const testPositionFilterCheckboxes = document.querySelectorAll('input[name="test_position_filter"]');
+            const tableBody = document.getElementById('dataTableBody');
+            const saveButton = document.getElementById('saveButton');
+            
+            const defaultTestedByOptions = [
+                { value: "", text: "선택..." }, { value: "김성훈", text: "김성훈" }, { value: "최은지", text: "최은지" }, { value: "원정연", text: "원정연" },
+                { value: "강태준", text: "강태준" }, { value: "김승연", text: "김승연" }, { value: "최주연", text: "최주연" },
+                { value: "이학철", text: "이학철" }, { value: "김태훈", text: "김태훈" }, { value: "이규림", text: "이규림" },
+                { value: "김희연", text: "김희연" }, { value: "정구윤", text: "정구윤" }, { value: "김건수", text: "김건수" },
+                { value: "이재혁", text: "이재혁" }, { value: "김미리", text: "김미리" }, { value: "김혜원", text: "김혜원" },
+                { value: "김예나", text: "김예나" }, { value: "이성수", text: "이성수" }
+            ];
+            const defaultSarLabOptions = [
+                { value: "", text: "선택..." }, { value: "SAR 1", text: "SAR 1" }, { value: "SAR 2", text: "SAR 2" }, { value: "SAR 3", text: "SAR 3" },
+                { value: "SAR 4", text: "SAR 4" }, { value: "SAR 5", text: "SAR 5" }, { value: "SAR 6", text: "SAR 6" },
+                { value: "SAR 7", text: "SAR 7" }, { value: "SAR 8", text: "SAR 8" }, { value: "SAR 9", text: "SAR 9" },
+                { value: "SAR 10", text: "SAR 10" }, { value: "SAR 11", text: "SAR 11" }
+            ];
+
+            const conditionTestPositions = {
+                "Head": ["Right Touch", "Right Tilt", "Left Touch", "Left Tilt"],
+                "Body-worn": ["Rear", "Front"],
+                "Hotspot": ["Rear", "Front", "Top", "Left", "Right", "Bottom"],
+                "Product specific 10-g Max": ["Rear", "Front", "Top", "Left", "Right", "Bottom"],
+                "Product specific 10-g Reduce": ["Rear", "Front", "Top", "Left", "Right", "Bottom"],
+                "Hand SAR": ["Rear", "Front", "Top", "Left", "Right", "Bottom"]
+            };
+
+            const positionCssClasses = {
+                "Right Touch": "bg-right-touch", "Right Tilt": "bg-right-tilt", "Left Touch": "bg-left-touch", "Left Tilt": "bg-left-tilt",
+                "Rear": "bg-rear", "Front": "bg-front", "Top": "bg-top", "Left": "bg-left", "Right": "bg-right", "Bottom": "bg-bottom"
+            };
+
+            const conditionToDsiInputIdSuffix = { 
+                "Head": "head", "Body-worn": "bodyworn", "Hotspot": "hotspot",
+                "Product specific 10-g Max": "ps10gmax",
+                "Product specific 10-g Reduce": "ps10greduce",
+                "Hand SAR": "handsar"
+            };
+            const conditionToDistInputIdSuffix = { 
+                "Body-worn": "bodyworn", "Hotspot": "hotspot",
+                "Product specific 10-g Max": "ps10gmax",
+                "Product specific 10-g Reduce": "ps10greduce"
+            };
+            
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            function createCell(type, attributes = {}, options = []) {
+                const cell = document.createElement('td');
+                let inputElement;
+                if (type === 'select') {
+                    inputElement = document.createElement('select');
+                    options.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt.value;
+                        option.textContent = opt.text;
+                        if (attributes.value && attributes.value === opt.value) {
+                           option.selected = true;
+                        }
+                        inputElement.appendChild(option);
+                    });
+                } else {
+                    inputElement = document.createElement('input');
+                    inputElement.type = type;
+                }
+                for (const attrKey in attributes) {
+                    if (attrKey !== 'value' || type !== 'select') { 
+                         inputElement.setAttribute(attrKey, attributes[attrKey]);
+                    }
+                }
+                if (type !== 'select' && attributes.value !== undefined) { 
+                    inputElement.value = attributes.value;
+                }
+                if (attributes.readonly) { 
+                    inputElement.readOnly = true;
+                }
+                cell.appendChild(inputElement);
+                return cell;
+            }
+            
+            function refreshGeneratedRows() {
+                rfConditionFilterCheckboxes.forEach(cb => {
+                    if (cb.checked) {
+                        generateRowsForCondition(cb.value);
+                    }
+                });
+                filterTable();
+            }
+
+            function updateChannelInputFields() {
+                const count = parseInt(numChannelsInput.value) || 0;
+                channelDetailsContainer.innerHTML = ''; 
+                if (count < 1 || count > 6) {
+                    numChannelsInput.value = Math.max(1, Math.min(6, count)); 
+                }
+                const correctedCount = parseInt(numChannelsInput.value);
+
+                for (let i = 1; i <= correctedCount; i++) {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.classList.add('settings-group'); 
+                    const chLabel = document.createElement('label');
+                    chLabel.setAttribute('for', `channel_ch_${i}`);
+                    chLabel.textContent = `채널 ${i} Ch#:`;
+                    const chInput = document.createElement('input');
+                    chInput.type = 'text';
+                    chInput.id = `channel_ch_${i}`;
+                    chInput.classList.add('channel-detail-input');
+                    chInput.placeholder = '예: Low/Mid/High';
+                    chInput.addEventListener('input', refreshGeneratedRows); 
+
+                    const freqLabel = document.createElement('label');
+                    freqLabel.setAttribute('for', `channel_freq_${i}`);
+                    freqLabel.textContent = `Freq. (MHz):`;
+                    const freqInput = document.createElement('input');
+                    freqInput.type = 'number';
+                    freqInput.id = `channel_freq_${i}`;
+                    freqInput.classList.add('channel-detail-input');
+                    freqInput.placeholder = '예: 1750';
+                    freqInput.step = 'any';
+                    freqInput.addEventListener('input', refreshGeneratedRows);
+
+                    groupDiv.appendChild(chLabel);
+                    groupDiv.appendChild(chInput);
+                    groupDiv.appendChild(freqLabel);
+                    groupDiv.appendChild(freqInput);
+                    channelDetailsContainer.appendChild(groupDiv);
+                }
+            }
+
+            function getGeneratedRowClass(conditionValue) {
+                return 'generated-' + conditionValue.toLowerCase().replace(/[\s\W-]+/g, '-').replace(/^-+|-+$/g, '') + '-row';
+            }
+
+            function removeGeneratedRowsByCondition(conditionValue) {
+                const specificRowClass = getGeneratedRowClass(conditionValue);
+                const rowsToRemove = tableBody.querySelectorAll(`tr.${specificRowClass}`);
+                rowsToRemove.forEach(row => row.remove());
+            }
+
+            function generateRowsForCondition(conditionValue) {
+                const specificRowClass = getGeneratedRowClass(conditionValue);
+                removeGeneratedRowsByCondition(conditionValue); 
+
+                const numChannels = parseInt(numChannelsInput.value);
+                if (isNaN(numChannels) || numChannels < 1 || numChannels > 6) {
+                    return; 
+                }
+                
+                const channelInfoFromInputs = [];
+                for (let i = 1; i <= numChannels; i++) {
+                    const chVal = document.getElementById(`channel_ch_${i}`)?.value || '';
+                    const freqVal = document.getElementById(`channel_freq_${i}`)?.value || '';
+                    channelInfoFromInputs.push({ ch: chVal, freq: freqVal });
+                }
+
+                let dsiValue = '';
+                const dsiInputIdSuffix = conditionToDsiInputIdSuffix[conditionValue];
+                if (dsiInputIdSuffix) {
+                    const dsiInputElement = document.getElementById(`dsi_input_${dsiInputIdSuffix}`);
+                    if (dsiInputElement) dsiValue = dsiInputElement.value;
+                }
+
+                const testPositions = conditionTestPositions[conditionValue] || [];
+
+                for (let j = 0; j < testPositions.length; j++) { 
+                    const currentTestPosition = testPositions[j];
+                    for (let channelIndex = 0; channelIndex < numChannels; channelIndex++) { 
+                        const currentChannelData = channelInfoFromInputs[channelIndex];
+                        const newRow = document.createElement('tr');
+                        newRow.classList.add('generated-row'); 
+                        newRow.classList.add(specificRowClass); 
+                        
+                        const bgColorClass = positionCssClasses[currentTestPosition];
+                        if (bgColorClass) newRow.classList.add(bgColorClass);
+
+                        let distValueForRow = '';
+                        let distIsReadonly = false; 
+
+                        if (conditionValue === "Head") {
+                            distValueForRow = document.getElementById('dist_input_head')?.value || "0"; 
+                            distIsReadonly = true;
+                        } else if (conditionValue === "Hand SAR") {
+                            if (currentTestPosition === "Rear") {
+                                const rearDistInputElement = document.getElementById('dist_input_handsar_rear');
+                                if (rearDistInputElement) distValueForRow = rearDistInputElement.value;
+                            } else {
+                                const generalHandSarDistInputElement = document.getElementById('dist_input_handsar');
+                                if (generalHandSarDistInputElement) distValueForRow = generalHandSarDistInputElement.value; 
+                                distIsReadonly = true;
+                            }
+                        } else if (conditionToDistInputIdSuffix[conditionValue]) { 
+                            const distInputIdSuffix = conditionToDistInputIdSuffix[conditionValue];
+                            const distInputElement = document.getElementById(`dist_input_${distInputIdSuffix}`);
+                            if (distInputElement) distValueForRow = distInputElement.value;
+                        }
+
+                        newRow.appendChild(createCell('date')); 
+                        newRow.appendChild(createCell('date')); 
+                        newRow.appendChild(createCell('select', { value: '' }, defaultTestedByOptions)); // 기본값 '' (선택...)
+                        newRow.appendChild(createCell('text', { placeholder: 'SN...' })); 
+                        newRow.appendChild(createCell('select', { value: '' }, defaultSarLabOptions)); // 기본값 '' (선택...)
+                        newRow.appendChild(createCell('text', { value: conditionValue, readonly: true })); 
+                        newRow.appendChild(createCell('text', { placeholder: 'Mode...' })); 
+                        newRow.appendChild(createCell('text', { value: dsiValue, placeholder: 'DSI...', readonly: true })); 
+                        newRow.appendChild(createCell('number', { value: distValueForRow, step: 'any', placeholder: 'mm', readonly: distIsReadonly })); 
+                        newRow.appendChild(createCell('text', { value: currentTestPosition, readonly: true })); 
+                        newRow.appendChild(createCell('text', { value: currentChannelData.ch, placeholder: 'Ch#', readonly: true })); 
+                        newRow.appendChild(createCell('number', { value: currentChannelData.freq, step: 'any', placeholder: 'MHz', readonly: true })); 
+                        newRow.appendChild(createCell('text', { placeholder: 'Limit' })); 
+                        newRow.appendChild(createCell('text', { placeholder: 'Meas.' , value: ''})); // 'Meas.' 필드명 수정 가정
+                        newRow.appendChild(createCell('number', { step: 'any' })); 
+                        newRow.appendChild(createCell('number', { step: 'any' })); 
+                        newRow.appendChild(createCell('number', { step: 'any' })); 
+                        newRow.appendChild(createCell('number', { step: 'any' })); 
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm'})); 
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm'})); 
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '%' })); 
+                        
+                        tableBody.appendChild(newRow);
+                    }
+                }
+            }
+
+            function filterTable() {
+                const selectedRfConditions = [];
+                rfConditionFilterCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) selectedRfConditions.push(checkbox.value);
+                });
+
+                const selectedTestPositions = [];
+                testPositionFilterCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) selectedTestPositions.push(checkbox.value);
+                });
+
+                const allRows = tableBody.querySelectorAll('tr');
+                allRows.forEach(row => {
+                    const rfCellInput = row.cells[5]?.querySelector('input[type="text"]');
+                    const rowRfCondition = rfCellInput ? rfCellInput.value.trim() : '';
+                    const tpCellInput = row.cells[9]?.querySelector('input[type="text"]');
+                    const rowTestPosition = tpCellInput ? tpCellInput.value.trim() : '';
+
+                    const rfFilterPass = selectedRfConditions.length === 0 || selectedRfConditions.includes(rowRfCondition);
+                    const positionFilterPass = selectedTestPositions.includes(rowTestPosition);
+
+                    row.style.display = (rfFilterPass && positionFilterPass) ? '' : 'none';
+                });
+            }
+            
+            rfConditionFilterCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const conditionValue = this.value;
+                    if (this.checked) generateRowsForCondition(conditionValue);
+                    else removeGeneratedRowsByCondition(conditionValue);
+                    filterTable(); 
+                });
+            });
+
+            testPositionFilterCheckboxes.forEach(checkbox => { 
+                checkbox.addEventListener('change', filterTable);
+            });
+            
+            numChannelsInput.addEventListener('input', function() { 
+                updateChannelInputFields(); 
+                refreshGeneratedRows();
+            });
+            
+            const allSettingsInputs = document.querySelectorAll(
+                '.settings-area input[type="text"].dsi-input, .settings-area input[type="number"].dist-input'
+            ); 
+            allSettingsInputs.forEach(input => {
+                if (!input.id.startsWith('channel_ch_') && !input.id.startsWith('channel_freq_')) { 
+                    input.addEventListener('input', refreshGeneratedRows);
+                }
+            });
+
+            // === 데이터 저장 로직 ===
+            if (saveButton) {
+                saveButton.addEventListener('click', async function() {
+                    const rowsToSave = [];
+                    const tableRows = tableBody.querySelectorAll('tr');
+
+                    tableRows.forEach(row => {
+                        const cells = row.cells;
+                        if (cells.length < 21 || row.style.display === 'none') return; 
+
+                        const rowData = {
+                            system_check_date: cells[0].querySelector('input')?.value || null,
+                            test_date: cells[1].querySelector('input')?.value || null,
+                            tested_by: cells[2].querySelector('select')?.value || '',
+                            sample_no: cells[3].querySelector('input')?.value || '',
+                            sar_lab: cells[4].querySelector('select')?.value || '',
+                            rf_exposure_condition: cells[5].querySelector('input')?.value || '',
+                            mode: cells[6].querySelector('input')?.value || '',
+                            dsi: cells[7].querySelector('input')?.value || '',
+                            distance_mm: cells[8].querySelector('input')?.value || null,
+                            test_position: cells[9].querySelector('input')?.value || '',
+                            channel: cells[10].querySelector('input')?.value || '', 
+                            frequency_mhz: cells[11].querySelector('input')?.value || null, 
+                            tune_up_limit: cells[12].querySelector('input')?.value || '',
+                            meas_power: cells[13].querySelector('input')?.value || '', 
+                            measured_sar_1g: cells[14].querySelector('input')?.value || null,
+                            scaled_sar_1g: cells[15].querySelector('input')?.value || null,
+                            measured_sar_10g: cells[16].querySelector('input')?.value || null,
+                            scaled_sar_10g: cells[17].querySelector('input')?.value || null,
+                            step_size_mm: cells[18].querySelector('input')?.value || null,
+                            dis_3db_peak_mm: cells[19].querySelector('input')?.value || null,
+                            z_axis_ratio_percent: cells[20].querySelector('input')?.value || null
+                        };
+                        
+                        Object.keys(rowData).forEach(key => {
+                            const numOrDateFields = ['distance_mm', 'frequency_mhz', 
+                                'measured_sar_1g', 'scaled_sar_1g', 'measured_sar_10g', 'scaled_sar_10g',
+                                'step_size_mm', 'dis_3db_peak_mm', 'z_axis_ratio_percent'
+                            ];
+                            if (rowData[key] === '') {
+                                if (key.endsWith('_date') || numOrDateFields.includes(key) ) {
+                                    rowData[key] = null;
+                                }
+                            } else if (numOrDateFields.includes(key) && rowData[key] !== null) { 
+                                rowData[key] = parseFloat(rowData[key]);
+                                if (isNaN(rowData[key])) rowData[key] = null; // 숫자로 변환 실패 시 null
+                            }
+                        });
+                        rowsToSave.push(rowData);
+                    });
+
+                    if (rowsToSave.length === 0) {
+                        alert("저장할 데이터가 없습니다 (필터링된 행은 제외).");
+                        return;
+                    }
+
+                    console.log("Saving data:", JSON.stringify(rowsToSave, null, 2)); 
+
+                    try {
+                        const response = await fetch("{% url 'tab:save_sar_data' %}", { 
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken') 
+                            },
+                            body: JSON.stringify(rowsToSave)
+                        });
+                        const result = await response.json();
+                        if (response.ok && result.status === 'success') { // 응답 상태 코드도 확인
+                            alert(result.message || '데이터가 성공적으로 저장되었습니다.');
+                        } else {
+                            alert('저장 실패: ' + (result.message || response.statusText || '알 수 없는 오류'));
+                        }
+                    } catch (error) {
+                        console.error('Save error:', error);
+                        alert('저장 중 오류가 발생했습니다. (서버 연결 확인 또는 CSRF 설정 점검)');
+                    }
+                });
+            }
+
+            // === 데이터 불러오기 로직 ===
+            function populateTableWithInitialData(data) {
+                if (!data || data.length === 0) {
+                    console.log("불러올 초기 데이터가 없습니다.");
+                    return;
+                }
+                tableBody.innerHTML = ''; // 기존 행 초기화 (만약 있다면)
+
+                data.forEach(rowData => {
+                    const newRow = document.createElement('tr');
+                    newRow.classList.add('loaded-row'); // 불러온 행임을 표시 (선택적)
+
+                    const rfCondition = rowData.rf_exposure_condition || '';
+                    const testPosition = rowData.test_position || '';
+                    
+                    const bgColorClass = positionCssClasses[testPosition];
+                    if (bgColorClass) newRow.classList.add(bgColorClass);
+                    
+                    // 각 컬럼에 대한 readonly 속성 결정
+                    let dsiIsReadonly = true;
+                    let distIsReadonly = false;
+                    if (rfCondition === "Head") distIsReadonly = true;
+                    else if (rfCondition === "Hand SAR" && testPosition !== "Rear") distIsReadonly = true;
+                    let chIsReadonly = true;
+                    let freqIsReadonly = true;
+
+                    newRow.appendChild(createCell('date', { value: rowData.system_check_date || '' }));
+                    newRow.appendChild(createCell('date', { value: rowData.test_date || '' }));
+                    newRow.appendChild(createCell('select', { value: rowData.tested_by || '' }, defaultTestedByOptions));
+                    newRow.appendChild(createCell('text', { value: rowData.sample_no || '', placeholder: 'SN...' }));
+                    newRow.appendChild(createCell('select', { value: rowData.sar_lab || '' }, defaultSarLabOptions));
+                    newRow.appendChild(createCell('text', { value: rfCondition, readonly: true }));
+                    newRow.appendChild(createCell('text', { value: rowData.mode || '', placeholder: 'Mode...' }));
+                    newRow.appendChild(createCell('text', { value: rowData.dsi || '', placeholder: 'DSI...', readonly: dsiIsReadonly }));
+                    newRow.appendChild(createCell('number', { value: rowData.distance_mm !== null ? rowData.distance_mm : '', step: 'any', placeholder: 'mm', readonly: distIsReadonly }));
+                    newRow.appendChild(createCell('text', { value: testPosition, readonly: true }));
+                    newRow.appendChild(createCell('text', { value: rowData.channel || '', placeholder: 'Ch#', readonly: chIsReadonly }));
+                    newRow.appendChild(createCell('number', { value: rowData.frequency_mhz !== null ? rowData.frequency_mhz : '', step: 'any', placeholder: 'MHz', readonly: freqIsReadonly }));
+                    newRow.appendChild(createCell('text', { value: rowData.tune_up_limit || '', placeholder: 'Limit' }));
+                    newRow.appendChild(createCell('text', { value: rowData.meas_power || '', placeholder: 'Meas.' }));
+                    newRow.appendChild(createCell('number', { value: rowData.measured_sar_1g !== null ? rowData.measured_sar_1g : '', step: 'any' }));
+                    newRow.appendChild(createCell('number', { value: rowData.scaled_sar_1g !== null ? rowData.scaled_sar_1g : '', step: 'any' }));
+                    newRow.appendChild(createCell('number', { value: rowData.measured_sar_10g !== null ? rowData.measured_sar_10g : '', step: 'any' }));
+                    newRow.appendChild(createCell('number', { value: rowData.scaled_sar_10g !== null ? rowData.scaled_sar_10g : '', step: 'any' }));
+                    newRow.appendChild(createCell('number', { value: rowData.step_size_mm !== null ? rowData.step_size_mm : '', step: 'any', placeholder: 'mm'}));
+                    newRow.appendChild(createCell('number', { value: rowData.dis_3db_peak_mm !== null ? rowData.dis_3db_peak_mm : '', step: 'any', placeholder: 'mm'}));
+                    newRow.appendChild(createCell('number', { value: rowData.z_axis_ratio_percent !== null ? rowData.z_axis_ratio_percent : '', step: 'any', placeholder: '%' }));
+                    
+                    tableBody.appendChild(newRow);
+                });
+                 // 불러온 데이터에 맞춰 상단 필터 상태 업데이트 (필요시 고급 기능)
+                // 예: 불러온 데이터에 있는 RF Condition들을 Set으로 만들고, 해당 체크박스들을 true로 설정
+                // 그 후 filterTable() 호출
+            }
+            
+            async function loadAndPopulateData() {
+                try {
+                    const response = await fetch("{% url 'tab:load_sar_data' %}"); // 앱 이름 'tab'으로 수정
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.status === 'success' && result.data) {
+                        populateTableWithInitialData(result.data);
+                    } else if (result.message) {
+                         console.warn("Data loading message:", result.message); // 데이터가 없을 수도 있음
+                    }
+                } catch (error) {
+                    console.error('Error loading initial data:', error);
+                    // alert('초기 데이터 로딩 중 오류가 발생했습니다.');
+                }
+            }
+
+            // 초기화
+            updateChannelInputFields(); 
+            loadAndPopulateData().then(() => { // 데이터 로딩 후 필터링 적용
+                filterTable();
+            }); 
+        });
+    </script>
+</body>
+</html>
