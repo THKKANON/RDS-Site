@@ -1,30 +1,38 @@
 from django.db import models
 
-# Create your models here.
-from django.db import models
-
 class SarDataEntry(models.Model):
+    # 새로운 필드 추가 (이전에 추가됨)
+    technology_type = models.CharField(max_length=50, db_index=True) # 예: "GSM", "LTE", "WIFI" 등
+
+    # 기존 필드들
     system_check_date = models.DateField(null=True, blank=True)
     test_date = models.DateField(null=True, blank=True)
-    tested_by = models.CharField(max_length=100, blank=True)
-    sample_no = models.CharField(max_length=100, blank=True)
-    sar_lab = models.CharField(max_length=100, blank=True)
-    rf_exposure_condition = models.CharField(max_length=100, blank=True)
-    mode = models.CharField(max_length=100, blank=True)
-    dsi = models.CharField(max_length=100, blank=True)
+    tested_by = models.CharField(max_length=100, blank=True, default='')
+    sample_no = models.CharField(max_length=100, blank=True, default='')
+    sar_lab = models.CharField(max_length=100, blank=True, default='')
+    rf_exposure_condition = models.CharField(max_length=100, blank=True, default='')
+    mode = models.CharField(max_length=100, blank=True, default='')
+    dsi = models.CharField(max_length=100, blank=True, default='')
     distance_mm = models.FloatField(null=True, blank=True)
-    test_position = models.CharField(max_length=100, blank=True)
-    channel = models.CharField(max_length=100, blank=True) # Ch#
+    test_position = models.CharField(max_length=100, blank=True, default='')
+    channel = models.CharField(max_length=100, blank=True, default='') # Ch#
     frequency_mhz = models.FloatField(null=True, blank=True)
-    tune_up_limit = models.CharField(max_length=100, blank=True) # 숫자 또는 범위일 수 있음
-    measured_sar_1g = models.FloatField(null=True, blank=True) # 1-g SAR Meas
-    scaled_sar_1g = models.FloatField(null=True, blank=True)   # 1-g SAR Scaled
-    measured_sar_10g = models.FloatField(null=True, blank=True) # 10-g SAR Meas
-    scaled_sar_10g = models.FloatField(null=True, blank=True)  # 10-g SAR Scaled
+    tune_up_limit = models.CharField(max_length=100, blank=True, default='')
 
-    step_size_mm = models.FloatField(null=True, blank=True)  # step size
-    dis_3db_peak_mm = models.FloatField(null=True, blank=True)  # dis 3dB
-    z_axis_ratio_percent = models.FloatField(null=True, blank=True)  # Z Axis
+    meas_power = models.CharField(max_length=100, blank=True, default='') 
+    
+    measured_sar_1g = models.FloatField(null=True, blank=True)
+    scaled_sar_1g = models.FloatField(null=True, blank=True)
+    measured_sar_10g = models.FloatField(null=True, blank=True)
+    scaled_sar_10g = models.FloatField(null=True, blank=True)
+    step_size_mm = models.FloatField(null=True, blank=True)
+    dis_3db_peak_mm = models.FloatField(null=True, blank=True)
+    z_axis_ratio_percent = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.sample_no} - {self.test_position} at {self.frequency_mhz}MHz"
+        return f"[{self.technology_type}] SN:{self.sample_no} - {self.test_position} ({self.frequency_mhz}MHz)"
+
+    class Meta:
+        verbose_name = "SAR Data Entry"
+        verbose_name_plural = "SAR Data Entries"
+        # ordering = ['-test_date', 'sample_no'] # 예시 정렬 순서

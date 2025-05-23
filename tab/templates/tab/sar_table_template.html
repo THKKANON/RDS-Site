@@ -1,10 +1,12 @@
-{% load static %} <!DOCTYPE html>
+{% load static %}
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>데이터 입력 테이블 (데이터 로딩 포함)</title>
+    <title>{{ technology_type|default:"데이터" }} 데이터 입력 테이블</title>
     <style>
+        /* ... (이전 CSS 스타일은 변경 없음, 그대로 유지) ... */
         body {
             font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
             background-color: #f0f0f0;
@@ -275,9 +277,13 @@
         }
     </style>
 </head>
-<body>
+<body 
+    data-technology-type="{{ technology_type|escapejs|default_if_none:'' }}"
+    data-load-url="{% if technology_type %}{% url 'tab:load_sar_data' technology_type=technology_type %}{% else %}#LOAD_URL_ERROR{% endif %}"
+    data-save-url="{% if technology_type %}{% url 'tab:save_sar_data' technology_type=technology_type %}{% else %}#SAVE_URL_ERROR{% endif %}"
+>
     <div class="container">
-        <h1>데이터 입력 및 정리 테이블</h1>
+        <h1>{{ technology_type|default:"기술 방식 미선택" }} 데이터 입력 및 정리 테이블</h1>
         {% csrf_token %} 
 
         <div class="settings-area">
@@ -401,7 +407,6 @@
 
     {{ initial_sar_data|json_script:"initial-sar-data" }}
 
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const numChannelsInput = document.getElementById('numChannels');
@@ -410,6 +415,25 @@
             const testPositionFilterCheckboxes = document.querySelectorAll('input[name="test_position_filter"]');
             const tableBody = document.getElementById('dataTableBody');
             const saveButton = document.getElementById('saveButton');
+
+            let currentTechnology = '';
+            let loadDataUrl = '';
+            let saveDataUrl = '';
+
+            const bodyDataset = document.body.dataset;
+            if (bodyDataset.technologyType && bodyDataset.technologyType !== '' && 
+                bodyDataset.loadUrl && !bodyDataset.loadUrl.includes('#ERROR') &&
+                bodyDataset.saveUrl && !bodyDataset.saveUrl.includes('#ERROR')) {
+                currentTechnology = bodyDataset.technologyType;
+                loadDataUrl = bodyDataset.loadUrl;
+                saveDataUrl = bodyDataset.saveUrl;
+                console.log("Page Context Loaded:", {currentTechnology, loadDataUrl, saveDataUrl});
+            } else {
+                console.error("필수 data-* 속성(technologyType, loadUrl, saveUrl)이 body 태그에 올바르게 설정되지 않았거나 값이 비어있습니다.");
+                alert("페이지 설정 오류: 기술 방식 또는 URL 정보가 누락되었습니다. Django 뷰와 템플릿 설정을 확인하세요.");
+                // saveButton.disabled = true; // 저장 버튼 비활성화 등 오류 처리
+                // return; // 스크립트의 나머지 부분 실행을 막을 수 있음
+            }
             
             const defaultTestedByOptions = [
                 { value: "", text: "선택..." }, { value: "김성훈", text: "김성훈" }, { value: "최은지", text: "최은지" }, { value: "원정연", text: "원정연" },
@@ -618,9 +642,9 @@
 
                         newRow.appendChild(createCell('date')); 
                         newRow.appendChild(createCell('date')); 
-                        newRow.appendChild(createCell('select', { value: '' }, defaultTestedByOptions)); // 기본값 '' (선택...)
+                        newRow.appendChild(createCell('select', { value: '' }, defaultTestedByOptions)); 
                         newRow.appendChild(createCell('text', { placeholder: 'SN...' })); 
-                        newRow.appendChild(createCell('select', { value: '' }, defaultSarLabOptions)); // 기본값 '' (선택...)
+                        newRow.appendChild(createCell('select', { value: '' }, defaultSarLabOptions)); 
                         newRow.appendChild(createCell('text', { value: conditionValue, readonly: true })); 
                         newRow.appendChild(createCell('text', { placeholder: 'Mode...' })); 
                         newRow.appendChild(createCell('text', { value: dsiValue, placeholder: 'DSI...', readonly: true })); 
@@ -629,7 +653,7 @@
                         newRow.appendChild(createCell('text', { value: currentChannelData.ch, placeholder: 'Ch#', readonly: true })); 
                         newRow.appendChild(createCell('number', { value: currentChannelData.freq, step: 'any', placeholder: 'MHz', readonly: true })); 
                         newRow.appendChild(createCell('text', { placeholder: 'Limit' })); 
-                        newRow.appendChild(createCell('text', { placeholder: 'Meas.' , value: ''})); // 'Meas.' 필드명 수정 가정
+                        newRow.appendChild(createCell('text', { placeholder: 'Meas.' , value: ''})); 
                         newRow.appendChild(createCell('number', { step: 'any' })); 
                         newRow.appendChild(createCell('number', { step: 'any' })); 
                         newRow.appendChild(createCell('number', { step: 'any' })); 
@@ -695,9 +719,12 @@
                 }
             });
 
-            // === 데이터 저장 로직 ===
             if (saveButton) {
                 saveButton.addEventListener('click', async function() {
+                    if (!saveDataUrl || saveDataUrl.includes('#ERROR')) {
+                        alert("저장 URL이 올바르게 설정되지 않았습니다. 페이지를 다시 로드하거나 관리자에게 문의하세요.");
+                        return;
+                    }
                     const rowsToSave = [];
                     const tableRows = tableBody.querySelectorAll('tr');
 
@@ -734,13 +761,13 @@
                                 'measured_sar_1g', 'scaled_sar_1g', 'measured_sar_10g', 'scaled_sar_10g',
                                 'step_size_mm', 'dis_3db_peak_mm', 'z_axis_ratio_percent'
                             ];
-                            if (rowData[key] === '') {
+                            if (rowData[key] === '') { 
                                 if (key.endsWith('_date') || numOrDateFields.includes(key) ) {
                                     rowData[key] = null;
                                 }
                             } else if (numOrDateFields.includes(key) && rowData[key] !== null) { 
-                                rowData[key] = parseFloat(rowData[key]);
-                                if (isNaN(rowData[key])) rowData[key] = null; // 숫자로 변환 실패 시 null
+                                const parsedValue = parseFloat(rowData[key]);
+                                rowData[key] = isNaN(parsedValue) ? null : parsedValue;
                             }
                         });
                         rowsToSave.push(rowData);
@@ -751,10 +778,10 @@
                         return;
                     }
 
-                    console.log("Saving data:", JSON.stringify(rowsToSave, null, 2)); 
+                    console.log(`Saving data for ${currentTechnology} to ${saveDataUrl}:`, JSON.stringify(rowsToSave, null, 2)); 
 
                     try {
-                        const response = await fetch("{% url 'tab:save_sar_data' %}", { 
+                        const response = await fetch(saveDataUrl, { 
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -763,10 +790,10 @@
                             body: JSON.stringify(rowsToSave)
                         });
                         const result = await response.json();
-                        if (response.ok && result.status === 'success') { // 응답 상태 코드도 확인
-                            alert(result.message || '데이터가 성공적으로 저장되었습니다.');
+                        if (response.ok && result.status === 'success') { 
+                            alert(result.message || `[${currentTechnology}] 데이터가 성공적으로 저장되었습니다.`);
                         } else {
-                            alert('저장 실패: ' + (result.message || response.statusText || '알 수 없는 오류'));
+                            alert(`저장 실패: ${result.message || response.statusText || '알 수 없는 오류'}`);
                         }
                     } catch (error) {
                         console.error('Save error:', error);
@@ -774,26 +801,23 @@
                     }
                 });
             }
-
-            // === 데이터 불러오기 로직 ===
+            
             function populateTableWithInitialData(data) {
-                if (!data || data.length === 0) {
-                    console.log("불러올 초기 데이터가 없습니다.");
+                if (!data || !Array.isArray(data)) { // Array.isArray 체크 추가
+                    console.log(`[${currentTechnology}] 불러올 초기 데이터가 없거나 형식이 잘못되었습니다.`);
+                    tableBody.innerHTML = '';
                     return;
                 }
-                tableBody.innerHTML = ''; // 기존 행 초기화 (만약 있다면)
+                tableBody.innerHTML = ''; 
 
                 data.forEach(rowData => {
                     const newRow = document.createElement('tr');
-                    newRow.classList.add('loaded-row'); // 불러온 행임을 표시 (선택적)
-
                     const rfCondition = rowData.rf_exposure_condition || '';
                     const testPosition = rowData.test_position || '';
                     
                     const bgColorClass = positionCssClasses[testPosition];
                     if (bgColorClass) newRow.classList.add(bgColorClass);
                     
-                    // 각 컬럼에 대한 readonly 속성 결정
                     let dsiIsReadonly = true;
                     let distIsReadonly = false;
                     if (rfCondition === "Head") distIsReadonly = true;
@@ -825,32 +849,63 @@
                     
                     tableBody.appendChild(newRow);
                 });
-                 // 불러온 데이터에 맞춰 상단 필터 상태 업데이트 (필요시 고급 기능)
-                // 예: 불러온 데이터에 있는 RF Condition들을 Set으로 만들고, 해당 체크박스들을 true로 설정
-                // 그 후 filterTable() 호출
             }
             
             async function loadAndPopulateData() {
+                const initialDataElement = document.getElementById('initial-sar-data');
+                if (initialDataElement && initialDataElement.textContent) {
+                    try {
+                        const initialData = JSON.parse(initialDataElement.textContent);
+                        if (initialData && Array.isArray(initialData) ) { 
+                             console.log(`[${currentTechnology}] ${initialData.length} entries loaded from template context.`);
+                             populateTableWithInitialData(initialData);
+                             // filterTable(); // populateTableWithInitialData 호출 후 filterTable은 main 로직에서 호출
+                             return; // 템플릿에서 데이터를 성공적으로 로드했으므로 fetch 호출 안 함
+                        } else {
+                            console.log(`[${currentTechnology}] No valid initial data in template context or data is empty.`);
+                             populateTableWithInitialData([]);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing initial data from template:", e);
+                         populateTableWithInitialData([]);
+                    }
+                } else {
+                     console.log("initial-sar-data element not found or empty. Will attempt fetch if URL is valid.");
+                }
+                
+                if (!loadDataUrl || loadDataUrl.includes('#ERROR')) { // URL 유효성 검사 추가
+                    console.warn("Load URL is not available or invalid. Skipping data load via fetch.");
+                    populateTableWithInitialData([]); 
+                    // filterTable(); // filterTable은 main 로직에서 호출
+                    return;
+                }
+
+                console.log(`Loading data for ${currentTechnology} from ${loadDataUrl} via fetch...`);
                 try {
-                    const response = await fetch("{% url 'tab:load_sar_data' %}"); // 앱 이름 'tab'으로 수정
+                    const response = await fetch(loadDataUrl); 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(`HTTP error! status: ${response.status} for ${loadDataUrl}`);
                     }
                     const result = await response.json();
-                    if (result.status === 'success' && result.data) {
+                    if (result.status === 'success' && result.data && Array.isArray(result.data)) {
                         populateTableWithInitialData(result.data);
+                        console.log(`[${currentTechnology}] ${result.data.length} entries loaded via fetch.`);
                     } else if (result.message) {
-                         console.warn("Data loading message:", result.message); // 데이터가 없을 수도 있음
+                         console.warn(`[${currentTechnology}] Data loading message via fetch: ${result.message}`);
+                         populateTableWithInitialData([]); 
+                    } else {
+                        console.warn(`[${currentTechnology}] Unexpected response structure from fetch.`);
+                        populateTableWithInitialData([]); 
                     }
                 } catch (error) {
-                    console.error('Error loading initial data:', error);
-                    // alert('초기 데이터 로딩 중 오류가 발생했습니다.');
+                    console.error(`Error loading initial data for ${currentTechnology} via fetch:`, error);
+                    populateTableWithInitialData([]); 
                 }
             }
 
             // 초기화
             updateChannelInputFields(); 
-            loadAndPopulateData().then(() => { // 데이터 로딩 후 필터링 적용
+            loadAndPopulateData().finally(() => { // loadAndPopulateData가 Promise를 반환하도록 수정하지 않았으므로, .then 대신 바로 호출
                 filterTable();
             }); 
         });

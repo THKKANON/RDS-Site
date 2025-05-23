@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>통신 방식 선택</title>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; font-family: sans-serif; padding-top: 50px; }
+        .tech-group { margin-bottom: 20px; }
+        .tech-group div { margin-bottom: 10px; }
+        .tech-group label { margin-right: 15px; font-size: 1.2em; }
+        .tech-group input[type="checkbox"] { width: 1.2em; height: 1.2em; margin-right: 5px; vertical-align: middle;}
+        button { padding: 10px 20px; font-size: 1.1em; cursor: pointer; margin-top: 20px; }
+        h1 { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <h1>SAR 데이터 테이블 - 통신 방식 선택</h1>
+    <form id="techSelectForm">
+        <div class="tech-group">
+            <div>
+                <input type="checkbox" id="tech_gsm" name="technology" value="GSM">
+                <label for="tech_gsm">GSM</label>
+            </div>
+            <div>
+                <input type="checkbox" id="tech_wcdma" name="technology" value="WCDMA">
+                <label for="tech_wcdma">WCDMA</label>
+            </div>
+            <div>
+                <input type="checkbox" id="tech_lte" name="technology" value="LTE">
+                <label for="tech_lte">LTE</label>
+            </div>
+            <div>
+                <input type="checkbox" id="tech_nr" name="technology" value="NR">
+                <label for="tech_nr">NR</label>
+            </div>
+            <div>
+                <input type="checkbox" id="tech_wifi" name="technology" value="WIFI">
+                <label for="tech_wifi">WIFI</label>
+            </div>
+        </div>
+        <button type="submit">선택한 기술 방식 테이블 보기</button>
+    </form>
+
+    <script>
+        document.getElementById('techSelectForm').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+            
+            const checkedCheckboxes = Array.from(document.querySelectorAll('input[name="technology"]:checked'));
+            
+            if (checkedCheckboxes.length === 0) {
+                alert('하나 이상의 통신 방식을 선택해주세요.');
+                return;
+            }
+
+            // === 수정된 부분: 첫 번째 선택된 값만 사용 ===
+            const technology = checkedCheckboxes[0].value; // 무조건 첫 번째 선택된 체크박스의 값만 사용
+            
+            // URL 인코딩은 Django URL 패턴에 특수문자가 들어갈 경우를 대비한 것이지만,
+            // 현재 기술명(GSM, LTE 등)에는 필요 없을 수 있습니다. 그래도 안전하게 유지합니다.
+            const targetUrl = `/tab/${encodeURIComponent(technology)}/`; 
+            
+            console.log(`선택된 기술 (첫 번째): ${technology}, 이동할 URL: ${targetUrl}`);
+            window.location.href = targetUrl;
+        });
+    </script>
+</body>
+</html>
