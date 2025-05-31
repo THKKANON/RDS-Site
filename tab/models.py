@@ -3,7 +3,6 @@ from django.db import models
 # 기존 SarDataEntry 모델
 class SarDataEntry(models.Model):
     technology_type = models.CharField(max_length=50, db_index=True, default='')
-    # ... (기존 필드들) ...
     system_check_date = models.DateField(null=True, blank=True)
     test_date = models.DateField(null=True, blank=True)
     tested_by = models.CharField(max_length=100, null=True, blank=True, default='')
@@ -16,6 +15,12 @@ class SarDataEntry(models.Model):
     test_position = models.CharField(max_length=100, blank=True, default='')
     channel = models.CharField(max_length=100, blank=True, default='')
     frequency_mhz = models.FloatField(null=True, blank=True)
+
+    # ▼▼▼ LTE/NR 기술 방식에서 사용할 새로운 필드 추가 ▼▼▼
+    rb = models.CharField(max_length=50, null=True, blank=True)         # 예: RB Size/Count 등
+    rb_position = models.CharField(max_length=50, null=True, blank=True) # 예: RB Start/Offset 등
+    # ▲▲▲ 새로운 필드 추가 완료 ▲▲▲
+
     tune_up_limit = models.CharField(max_length=100, null=True, blank=True, default='')
     meas_power = models.CharField(max_length=100, null=True, blank=True, default='')
     measured_sar_1g = models.FloatField(null=True, blank=True)

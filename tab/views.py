@@ -2,11 +2,20 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 import json
-from .models import SarDataEntry, TechnologyChannelConfig, ChannelDetail # 새 모델 임포트
+from .models import SarDataEntry, TechnologyChannelConfig, ChannelDetail # 모델 임포트
 import logging
 
 logger = logging.getLogger(__name__)
 VALID_TECHNOLOGIES = ["GSM", "WCDMA", "LTE", "NR", "WIFI"]
+
+# 기술 방식과 템플릿 파일명을 매핑하는 딕셔너리
+TECHNOLOGY_TEMPLATE_MAP = {
+    "GSM": "tab/sar_table_gsm.html",
+    "WCDMA": "tab/sar_table_wcdma.html",
+    "LTE": "tab/sar_table_lte.html", # LTE는 기존 템플릿을 사용하거나 필요시 "tab/sar_table_lte.html" 등으로 변경
+    "NR": "tab/sar_table_nr.html",
+    "WIFI": "tab/sar_table_wifi.html",
+}
 
 def select_technology_view(request):
     return render(request, 'tab/select_technology.html')
@@ -16,6 +25,15 @@ def sar_table_view(request, technology_type):
     tech_upper = technology_type.upper()
     if not technology_type or tech_upper not in VALID_TECHNOLOGIES:
         raise Http404(f"잘못된 기술 방식입니다: {technology_type}")
+
+    # 매핑된 템플릿 이름을 가져옵니다.
+    template_name = TECHNOLOGY_TEMPLATE_MAP.get(tech_upper)
+    if not template_name:
+        # VALID_TECHNOLOGIES에 있지만 TECHNOLOGY_TEMPLATE_MAP에 없는 경우의 처리
+        # 예를 들어, 모든 기술에 대한 기본 템플릿을 지정하거나, 에러를 발생시킬 수 있습니다.
+        # 여기서는 Http404를 발생시키도록 하겠습니다.
+        logger.warning(f"'{tech_upper}'에 대해 정의된 테이블 템플릿이 TECHNOLOGY_TEMPLATE_MAP에 없습니다.")
+        raise Http404(f"'{tech_upper}'에 대해 정의된 테이블 템플릿이 없습니다.")
 
     # 1. 채널 설정 정보 로드
     channel_config = TechnologyChannelConfig.objects.filter(technology_type=tech_upper).first()
@@ -36,9 +54,10 @@ def sar_table_view(request, technology_type):
     initial_sar_data = list(SarDataEntry.objects.filter(technology_type=tech_upper).order_by('id').values())
     
     # 3. SAR 데이터 존재 유무 확인 및 initial_page_config에 추가
-    sar_data_exists = bool(initial_sar_data) # 데이터가 있으면 True, 없으면 False
-    initial_page_config['sarDataExists'] = sar_data_exists # ★★★ 이 값을 JS에서 사용 ★★★
+    sar_data_exists = bool(initial_sar_data) 
+    initial_page_config['sarDataExists'] = sar_data_exists
 
+    logger.debug(f"VIEW_DEBUG: For '{tech_upper}', attempting to render with template: '{template_name}'")
     logger.debug(f"VIEW_DEBUG: For '{tech_upper}', sar_data_exists: {sar_data_exists}")
     logger.debug(f"VIEW_DEBUG: For '{tech_upper}', initial_page_config being sent: {initial_page_config}")
     logger.debug(f"VIEW_DEBUG: For '{tech_upper}', initial_sar_data count: {len(initial_sar_data)}")
@@ -48,7 +67,8 @@ def sar_table_view(request, technology_type):
         'initial_sar_data': initial_sar_data, 
         'initial_page_config': initial_page_config 
     }
-    return render(request, 'tab/sar_table_template.html', context)
+    # 선택된 템플릿으로 렌더링
+    return render(request, template_name, context)
 
 
 @csrf_exempt 

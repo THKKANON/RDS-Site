@@ -1,0 +1,634 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ technology_type|default:"데이터" }} 데이터 입력 테이블 (기능 개선 최종)</title>
+    <style>
+        /* 기본 스타일 */
+        body { font-family: "Malgun Gothic", "맑은 고딕", sans-serif; background-color: #f0f0f0; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { background-color: #ffffff; border: 1px solid #a0a0a0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 20px; width: 98%; max-width: 2200px; border-radius: 4px; }
+        h1 { font-size: 1.3em; color: #333333; text-align: center; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #cccccc; padding-bottom: 10px; }
+        .settings-area, .filter-area { margin-bottom: 15px; padding: 15px; border: 1px solid #d0d0d0; border-radius: 4px; background-color: #f9f9f9; }
+        .filter-area legend, .settings-area legend { font-weight: bold; font-size: 1em; color: #333; padding: 0 5px; margin-bottom: 10px; }
+        
+        /* Settings Layout */
+        .settings-layout { display: flex; flex-wrap: wrap; gap: 20px; }
+        .settings-column { flex: 1; min-width: 300px; /* 최소 너비 조정 */ display: flex; flex-direction: column; gap: 15px; }
+        #channel-settings-column { align-items: center; }
+        #channelDetailsContainer { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
+        
+        .dsi-dist-layout { display: flex; flex-direction: row; gap: 20px; width: 100%; }
+        .dsi-dist-sub-column { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 250px; /* 각 하위 컬럼 최소 너비 */ }
+        .sub-column-title { font-weight: bold; font-size: 0.9em; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+
+        .settings-group { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; /* 기본은 줄바꿈 없음 */ }
+        #numChannelsGroup, #channelDetailsContainer .settings-group { width: fit-content; }
+        /* .dsi-dist-sub-column .settings-group { width: 100%; } */ /* 이 부분은 아래에서 더 구체적으로 제어 */
+
+        .settings-group label { font-weight: bold; font-size: 0.9em; margin-right: 5px; white-space: nowrap; flex-shrink: 0; text-align: left; }
+        .settings-group input[type="number"], .settings-group input[type="text"] { padding: 5px; font-size: 0.9em; border: 1px solid #b0b0b0; border-radius: 3px; }
+        .settings-group input[type="number"]#numChannels { width: 60px; flex-grow: 0; }
+        #channelDetailsContainer .settings-group input[type="text"].channel-detail-input, 
+        #channelDetailsContainer .settings-group input[type="number"].channel-detail-input { width: 100px; flex-grow: 0; }
+        
+        /* DSI/Dist 설정 내 레이블 및 입력 필드 스타일 */
+        .dsi-dist-sub-column .settings-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* ★ 화면 작을 때 레이블 아래로 입력 필드가 내려갈 수 있도록 wrap 허용 */
+            width: 100%;
+        }
+        .dsi-dist-sub-column .settings-group label {
+            flex-basis: 180px; /* 레이블 기본 너비 */
+            flex-shrink: 0; /* 레이블 너비 줄어들지 않게 */
+            margin-right: 10px;
+            white-space: normal; /* ★ 레이블 텍스트 길면 줄바꿈 되도록 */
+            word-break: keep-all;
+        }
+        #dist-master-list .settings-group label { /* Dist 레이블이 더 길 수 있으므로 조금 더 넓게 */
+            flex-basis: 210px;
+        }
+
+        .dsi-dist-sub-column .settings-group input[type="text"],
+        .dsi-dist-sub-column .settings-group input[type="number"] {
+            flex-grow: 1; /* 남은 공간을 채우도록 */
+            min-width: 80px; /* 최소 너비 */
+            width: auto; /* 고정 너비 대신 자동 */
+        }
+
+        /* Filter & Table & Button Styles (이전과 동일) */
+        #channelDetailsContainer .channel-input-group label { font-weight: normal; font-size: 0.85em; min-width: 70px; }
+        #saveChannelConfigBtn { margin-left: 10px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px 15px; }
+        .checkbox-item { display: flex; align-items: center; font-size: 0.85em; }
+        .checkbox-item input[type="checkbox"] { margin-right: 5px; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid #c0c0c0; table-layout: fixed; }
+        th, td { border: 1px solid #c0c0c0; padding: 5px 7px; font-size: 0.7em; overflow-wrap: break-word; word-wrap: break-word; }
+        th { background-color: #e0e0e0; color: #333333; font-weight: bold; text-align: center; position: sticky; top: 0; z-index: 2; }
+        td { text-align: center; }
+        th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { width: 90px; }
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        tbody tr.bg-right-touch, tbody tr.bg-right-touch:nth-child(even)  { background-color: #add8e6; } 
+        tbody tr.bg-right-tilt, tbody tr.bg-right-tilt:nth-child(even)   { background-color: #90ee90; } 
+        tbody tr.bg-left-touch, tbody tr.bg-left-touch:nth-child(even)   { background-color: #ffcc99; } 
+        tbody tr.bg-left-tilt, tbody tr.bg-left-tilt:nth-child(even)     { background-color: #ffffcc; } 
+        tbody tr.bg-rear, tbody tr.bg-rear:nth-child(even)                { background-color: #ffcccb; } 
+        tbody tr.bg-front, tbody tr.bg-front:nth-child(even)              { background-color: #e6e6fa; } 
+        tbody tr.bg-top, tbody tr.bg-top:nth-child(even)                  { background-color: #ccddff; }
+        tbody tr.bg-left, tbody tr.bg-left:nth-child(even)                { background-color: #90ee90; } 
+        tbody tr.bg-right, tbody tr.bg-right:nth-child(even)              { background-color: #ffcc99; } 
+        tbody tr.bg-bottom, tbody tr.bg-bottom:nth-child(even)            { background-color: #ffffcc; }
+        tbody tr:hover { background-color: #e0e0e0 !important; }
+        input[type="text"], input[type="date"], input[type="number"], select { width: 100%; padding: 4px; border: 1px solid #b0b0b0; border-radius: 3px; box-sizing: border-box; font-family: inherit; font-size: 1em; background-color: #fff; text-align: center; }
+        select { text-align: left; }
+        input[type="date"] { text-align: left; padding: 4px 3px; }
+
+        input[readonly]:not([type="checkbox"]):not([type="radio"]):not(.master-dsi-input):not(.master-dist-input),
+        input:read-only:not([type="checkbox"]):not([type="radio"]):not(.master-dsi-input):not(.master-dist-input),
+        select[readonly], 
+        input#numChannels[readonly], /* ID가 numChannels인 input은 타입이 number일 것이므로 그대로 둠 */
+
+        #channelDetailsContainer input[readonly] { 
+            background-color: #e9e9e9 !important; 
+            color: #555 !important;
+            cursor: not-allowed !important;
+            border: 1px solid #ccc !important;
+        }
+        input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus:not([readonly]), select:focus { border-color: #0078d4; outline: none; box-shadow: 0 0 0 1px #0078d4; }
+        .actions { text-align: right; margin-top: 20px; }
+        button { padding: 7px 12px; background-color: #0078d4; color: white; border: 1px solid #005a9e; border-radius: 3px; cursor: pointer; font-size: 0.85em; }
+        button:hover { background-color: #005a9e; }
+        button:disabled { background-color: #ccc; border-color: #bbb; cursor: not-allowed; }
+
+        /* ★★★ 반응형 레이아웃을 위한 미디어 쿼리 ★★★ */
+        @media (max-width: 992px) { /* 화면이 992px 이하일 때 DSI와 Dist 섹션을 세로로 쌓음 */
+            .dsi-dist-layout {
+                flex-direction: column;
+                gap: 15px; /* 세로로 쌓일 때 간격 */
+            }
+            .dsi-dist-sub-column {
+                 min-width: 100%; /* 세로로 쌓일 때 너비 100% */
+            }
+        }
+
+        @media (max-width: 576px) { /* 화면이 576px 이하일 때 레이블과 인풋을 세로로 쌓음 */
+            .settings-column { /* 전반적인 settings-column의 최소 너비도 조정 */
+                min-width: 280px;
+            }
+            .dsi-dist-sub-column .settings-group {
+                flex-direction: column;
+                align-items: flex-start; /* 왼쪽 정렬 */
+            }
+            .dsi-dist-sub-column .settings-group label {
+                flex-basis: auto; /* 너비 자동 */
+                width: 100%;
+                margin-bottom: 3px; /* 레이블과 인풋 사이 간격 */
+                margin-right: 0;
+            }
+            .dsi-dist-sub-column .settings-group input[type="text"],
+            .dsi-dist-sub-column .settings-group input[type="number"] {
+                width: 100%; /* 인풋 너비 100% */
+                min-width: 0; /* 최소 너비 제한 해제 */
+            }
+        }
+    </style>
+</head>
+<body 
+    data-technology-type="{{ technology_type|escapejs|default_if_none:'' }}"
+    data-load-url="{% if technology_type %}{% url 'tab:load_sar_data' technology_type=technology_type %}{% else %}#LOAD_URL_ERROR_NO_TECH_TYPE{% endif %}"
+    data-save-url="{% if technology_type %}{% url 'tab:save_sar_data' technology_type=technology_type %}{% else %}#SAVE_URL_ERROR_NO_TECH_TYPE{% endif %}"
+    data-save-channel-config-url="{% if technology_type %}{% url 'tab:save_channel_config' technology_type=technology_type %}{% else %}#CONFIG_URL_ERROR{% endif %}"
+>
+    <div class="container">
+        <h1>{{ technology_type|default:"기술 방식 미선택" }} 데이터 입력 및 정리 테이블</h1>
+        {% csrf_token %} 
+
+        <div class="settings-area">
+            <div class="settings-layout"> 
+                <div class="settings-column" id="channel-settings-column"> 
+                    <div class="settings-group" id="numChannelsGroup">
+                        <label for="numChannels">채널 개수 (1-6):</label>
+                        <input type="number" id="numChannels" name="numChannels" min="1" max="6" value="1">
+                        <button type="button" id="saveChannelConfigBtn">채널 설정 저장</button>
+                    </div>
+                    <div id="channelDetailsContainer"></div>
+                </div>
+                <div class="settings-column" id="dsi-dist-column"> 
+                    <div class="dsi-dist-layout">
+                        <div id="dsi-master-list" class="dsi-dist-sub-column">
+                            <p class="sub-column-title">DSI 설정</p>
+                            <div class="settings-group"> <label for="dsi_input_head">Head DSI:</label> <input type="text" id="dsi_input_head" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                            <div class="settings-group"> <label for="dsi_input_bodyworn">Body-worn DSI:</label> <input type="text" id="dsi_input_bodyworn" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                            <div class="settings-group"> <label for="dsi_input_hotspot">Hotspot DSI:</label> <input type="text" id="dsi_input_hotspot" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                            <div class="settings-group"> <label for="dsi_input_ps10gmax">P.S. 10g Max DSI:</label> <input type="text" id="dsi_input_ps10gmax" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                            <div class="settings-group"> <label for="dsi_input_ps10greduce">P.S. 10g Reduce DSI:</label> <input type="text" id="dsi_input_ps10greduce" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                            <div class="settings-group"> <label for="dsi_input_handsar">Hand SAR DSI:</label> <input type="text" id="dsi_input_handsar" class="dsi-input global-setting-input master-dsi-input" placeholder="DSI"> </div>
+                        </div>
+                        <div id="dist-master-list" class="dsi-dist-sub-column">
+                            <p class="sub-column-title">Dist. (mm) 설정</p>
+                            <div class="settings-group"> <label for="dist_input_head">Head Dist.(mm):</label> <input type="number" id="dist_input_head" class="dist-input global-setting-input master-dist-input" value="0" readonly> </div>
+                            <div class="settings-group"> <label for="dist_input_bodyworn">Body-worn Dist.(mm):</label> <input type="number" id="dist_input_bodyworn" class="dist-input global-setting-input master-dist-input" step="any" placeholder="mm"> </div>
+                            <div class="settings-group"> <label for="dist_input_hotspot">Hotspot Dist.(mm):</label> <input type="number" id="dist_input_hotspot" class="dist-input global-setting-input master-dist-input" step="any" placeholder="mm"> </div>
+                            <div class="settings-group"> <label for="dist_input_ps10gmax">P.S. 10g Max Dist.(mm):</label> <input type="number" id="dist_input_ps10gmax" class="dist-input global-setting-input master-dist-input" step="any" placeholder="mm"> </div>
+                            <div class="settings-group"> <label for="dist_input_ps10greduce">P.S. 10g Reduce Dist.(mm):</label> <input type="number" id="dist_input_ps10greduce" class="dist-input global-setting-input master-dist-input" step="any" placeholder="mm"> </div>
+                            <div class="settings-group"> <label for="dist_input_handsar">Hand SAR Dist.(mm):</label> <input type="number" id="dist_input_handsar" class="dist-input global-setting-input master-dist-input" value="0" readonly> </div>
+                            <div class="settings-group"> <label for="dist_input_handsar_rear">Hand SAR Rear Dist.(mm):</label> <input type="number" id="dist_input_handsar_rear" class="dist-input global-setting-input master-dist-input" step="any" placeholder="mm"> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <fieldset class="filter-area">
+            <legend>RF Exposure Condition 필터</legend>
+            <div class="checkbox-group" id="rfConditionFilterGroup">
+                <div class="checkbox-item"><input type="checkbox" id="rf_head" name="rf_condition_filter" value="Head"><label for="rf_head">Head</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_bodyworn" name="rf_condition_filter" value="Body-worn"><label for="rf_bodyworn">Body-worn</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_hotspot" name="rf_condition_filter" value="Hotspot"><label for="rf_hotspot">Hotspot</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_ps10gmax" name="rf_condition_filter" value="Product specific 10-g Max"><label for="rf_ps10gmax">P.S. 10-g Max</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_ps10greduce" name="rf_condition_filter" value="Product specific 10-g Reduce"><label for="rf_ps10greduce">P.S. 10-g Reduce</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="rf_handsar" name="rf_condition_filter" value="Hand SAR"><label for="rf_handsar">Hand SAR</label></div>
+            </div>
+        </fieldset>
+
+        <fieldset class="filter-area">
+            <legend>Test Position 필터</legend>
+            <div class="checkbox-group" id="testPositionFilterGroup">
+                 <div class="checkbox-item"><input type="checkbox" id="pos_rtouch" name="test_position_filter" value="Right Touch" checked><label for="pos_rtouch">Right Touch</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_rtilt" name="test_position_filter" value="Right Tilt" checked><label for="pos_rtilt">Right Tilt</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_ltouch" name="test_position_filter" value="Left Touch" checked><label for="pos_ltouch">Left Touch</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_ltilt" name="test_position_filter" value="Left Tilt" checked><label for="pos_ltilt">Left Tilt</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_rear" name="test_position_filter" value="Rear" checked><label for="pos_rear">Rear</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_front" name="test_position_filter" value="Front" checked><label for="pos_front">Front</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_top" name="test_position_filter" value="Top" checked><label for="pos_top">Top</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_left" name="test_position_filter" value="Left" checked><label for="pos_left">Left</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_right" name="test_position_filter" value="Right" checked><label for="pos_right">Right</label></div>
+                 <div class="checkbox-item"><input type="checkbox" id="pos_bottom" name="test_position_filter" value="Bottom" checked><label for="pos_bottom">Bottom</label></div>
+            </div>
+        </fieldset>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>System Check Date</th><th>Test Date</th><th>Tested By</th><th>Sample no.</th><th>SAR Lab.</th>
+                    <th>RF Exposure conditions</th><th>Mode</th><th>DSI</th><th>Dist. (mm)</th><th>Test Position</th>
+                    <th>Ch#</th><th>Freq. (MHz)</th><th>RB</th><th>RB Position</th><th>Tune-up Limit</th><th>Meas.</th><th>1-g SAR Meas</th>
+                    <th>1-g SAR Scaled</th><th>10-g SAR Meas</th><th>10-g SAR Scaled</th><th>Step Size (mm)</th>
+                    <th>Dis 3dB Peak (mm)</th><th>Z-axis Ratio (%)</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody"></tbody>
+        </table>
+        <div class="actions">
+            <button type="button" id="addDataRowBtn" style="display:none; margin-right: 10px;">특정 데이터 행 추가</button>
+            <button type="button" id="saveTableDataBtn">테이블 데이터 저장</button>
+        </div>
+    </div>
+
+    {{ initial_sar_data|json_script:"initial-sar-data" }}
+    <script id="initial-page-config" type="application/json">
+        {{ initial_page_config|json_script:"initial-page-config" }}
+    </script>
+
+    <script>
+    // JavaScript 코드는 이전 답변의 전체 수정본과 동일하게 유지합니다.
+    // (addSingleDataRow 함수 정의 포함, DSI/Dist 실시간 업데이트 및 저장 로직 포함)
+    // ... (이전 답변의 JavaScript 전체를 여기에 복사) ...
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('DEBUG: DOMContentLoaded event fired.');
+
+        const numChannelsInput = document.getElementById('numChannels');
+        const saveChannelConfigBtn = document.getElementById('saveChannelConfigBtn');
+        const channelDetailsContainer = document.getElementById('channelDetailsContainer');
+        const rfConditionFilterCheckboxes = document.querySelectorAll('input[name="rf_condition_filter"]');
+        const testPositionFilterCheckboxes = document.querySelectorAll('input[name="test_position_filter"]');
+        const tableBody = document.getElementById('dataTableBody');
+        const saveTableDataBtn = document.getElementById('saveTableDataBtn'); 
+        const addDataRowBtn = document.getElementById('addDataRowBtn'); 
+
+        let currentTechnology = '';
+        let loadDataUrl = '';
+        let saveDataUrl = '';
+        let saveChannelConfigUrl = ''; 
+        let isChannelConfigDoneGlobal = false; 
+        let configuredNumChannelsGlobal = 0;
+        let initialChannelDetailsGlobal = []; 
+        let sarDataExistsGlobal = false; 
+        let initialSarEntries = [];
+
+        function getJsonFromScriptTag(elementId) { 
+            const element = document.getElementById(elementId); if (!element) { console.warn(`DEBUG: Element with ID '${elementId}' NOT FOUND.`); return null; } let jsonString = null; if (element.textContent) { jsonString = element.textContent.trim(); } if (!jsonString || jsonString === "" || jsonString.toLowerCase() === "null") { /*console.log(`DEBUG: No valid content in '${elementId}' (from textContent).`);*/ return null; } if (jsonString.startsWith("<script")) { console.warn(`DEBUG: Content of '${elementId}' includes <script> tags. Trying REGEX.`); const match = jsonString.match(/{.*}/s) || jsonString.match(/\[.*\]/s); if (match && match[0]) { jsonString = match[0]; } else { console.error(`DEBUG: REGEX failed for '${elementId}'.`); return null; } } try { return JSON.parse(jsonString); } catch (e) { console.error(`DEBUG: Error parsing JSON from '${elementId}':`, e, "Attempted:", jsonString.substring(0,100)+"..."); return null; }
+        }
+
+        console.log('DEBUG: Attempting to load page context from body data attributes.');
+        const bodyDataset = document.body.dataset;
+        if (bodyDataset.technologyType && bodyDataset.technologyType.trim() !== '' && 
+            bodyDataset.loadUrl && !bodyDataset.loadUrl.includes('#ERROR') &&
+            bodyDataset.saveUrl && !bodyDataset.saveUrl.includes('#ERROR') &&
+            bodyDataset.saveChannelConfigUrl && !bodyDataset.saveChannelConfigUrl.includes('#ERROR')) {
+            currentTechnology = bodyDataset.technologyType; loadDataUrl = bodyDataset.loadUrl; saveDataUrl = bodyDataset.saveUrl; saveChannelConfigUrl = bodyDataset.saveChannelConfigUrl;
+            const config = getJsonFromScriptTag('initial-page-config');
+            if (config) { isChannelConfigDoneGlobal = config.isChannelConfigDone === true; configuredNumChannelsGlobal = parseInt(config.configuredNumChannels) || 0; initialChannelDetailsGlobal = config.channelDetails || []; sarDataExistsGlobal = config.sarDataExists === true; if (isChannelConfigDoneGlobal && configuredNumChannelsGlobal > 0) { numChannelsInput.value = configuredNumChannelsGlobal; } console.log('DEBUG: Successfully parsed page config data:', config); } 
+            else { console.error('DEBUG: Failed to parse initial-page-config. Using defaults.'); }
+            initialSarEntries = getJsonFromScriptTag('initial-sar-data') || []; console.log('DEBUG: Parsed initial SAR data count:', initialSarEntries.length);
+        } else { console.error("DEBUG: 필수 data-* 속성 오류."); /* 버튼 비활성화 등 */ }
+        
+        if (sarDataExistsGlobal) { if (addDataRowBtn) addDataRowBtn.style.display = 'inline-block'; } 
+        else { if (addDataRowBtn) addDataRowBtn.style.display = 'none'; }
+
+        const defaultTestedByOptions = [ { value: "", text: "선택하세요" }]; 
+        const defaultSarLabOptions = [ { value: "", text: "선택하세요" }]; 
+        defaultTestedByOptions.splice(1, 0, { value: "김성훈", text: "김성훈" }, { value: "최은지", text: "최은지" }, { value: "원정연", text: "원정연" }, { value: "강태준", text: "강태준" }, { value: "김승연", text: "김승연" }, { value: "최주연", text: "최주연" }, { value: "이학철", text: "이학철" }, { value: "김태훈", text: "김태훈" }, { value: "이규림", text: "이규림" }, { value: "김희연", text: "김희연" }, { value: "정구윤", text: "정구윤" }, { value: "김건수", text: "김건수" }, { value: "이재혁", text: "이재혁" }, { value: "김미리", text: "김미리" }, { value: "김혜원", text: "김혜원" }, { value: "김예나", text: "김예나" }, { value: "이성수", text: "이성수" } );
+        defaultSarLabOptions.splice(1, 0, { value: "SAR 1", text: "SAR 1" }, { value: "SAR 2", text: "SAR 2" }, { value: "SAR 3", text: "SAR 3" }, { value: "SAR 4", text: "SAR 4" }, { value: "SAR 5", text: "SAR 5" }, { value: "SAR 6", text: "SAR 6" }, { value: "SAR 7", text: "SAR 7" }, { value: "SAR 8", text: "SAR 8" }, { value: "SAR 9", text: "SAR 9" }, { value: "SAR 10", text: "SAR 10" }, { value: "SAR 11", text: "SAR 11" } );
+        const conditionTestPositions = { "Head": ["Right Touch", "Right Tilt", "Left Touch", "Left Tilt"], "Body-worn": ["Rear", "Front"], "Hotspot": ["Rear", "Front", "Top", "Left", "Right", "Bottom"], "Product specific 10-g Max": ["Rear", "Front", "Top", "Left", "Right", "Bottom"], "Product specific 10-g Reduce": ["Rear", "Front", "Top", "Left", "Right", "Bottom"], "Hand SAR": ["Rear", "Front", "Top", "Left", "Right", "Bottom"] };
+        const positionCssClasses = { "Right Touch": "bg-right-touch", "Right Tilt": "bg-right-tilt", "Left Touch": "bg-left-touch", "Left Tilt": "bg-left-tilt", "Rear": "bg-rear", "Front": "bg-front", "Top": "bg-top", "Left": "bg-left", "Right": "bg-right", "Bottom": "bg-bottom" };
+        const conditionToDsiInputIdSuffix = { "Head": "head", "Body-worn": "bodyworn", "Hotspot": "hotspot", "Product specific 10-g Max": "ps10gmax", "Product specific 10-g Reduce": "ps10greduce", "Hand SAR": "handsar" };
+        const conditionToDistInputIdSuffix = { "Head": "head", "Body-worn": "bodyworn", "Hotspot": "hotspot", "Product specific 10-g Max": "ps10gmax", "Product specific 10-g Reduce": "ps10greduce", "Hand SAR": "handsar" };
+
+        function getCookie(name) { let cookieValue = null; if (document.cookie && document.cookie !== '') { const cookies = document.cookie.split(';'); for (let i = 0; i < cookies.length; i++) { const cookie = cookies[i].trim(); if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; } } } return cookieValue; }
+        function createCell(type, attributes = {}, options = []) { const td = document.createElement('td'); let inputElement; if (type === 'select') { inputElement = document.createElement('select'); options.forEach(opt => { const option = document.createElement('option'); option.value = opt.value; option.textContent = opt.text; inputElement.appendChild(option); }); } else { inputElement = document.createElement('input'); inputElement.type = type; } for (const key in attributes) { if (key === 'value') { inputElement.value = attributes[key] === null || attributes[key] === undefined ? '' : attributes[key]; } else if (key === 'readonly' || key === 'readOnly') { inputElement.readOnly = attributes[key]; } else { inputElement.setAttribute(key, attributes[key]); } } td.appendChild(inputElement); return td; }
+        function refreshPreviewRowsAndFilter() { if (sarDataExistsGlobal) { filterTable(); return; } rfConditionFilterCheckboxes.forEach(cb => { if (cb.checked) { generatePreviewRowsForCondition(cb.value); } else { removeGeneratedRowsByCondition(cb.value); } }); filterTable(); }
+        function updateChannelInputFields() { /* ... (이전과 동일) ... */ console.log('DEBUG: updateChannelInputFields called. isChannelConfigDoneGlobal:', isChannelConfigDoneGlobal, 'configuredNumChannelsGlobal:', configuredNumChannelsGlobal); let count = parseInt(numChannelsInput.value); const isConfigDone = isChannelConfigDoneGlobal; const numConfigured = configuredNumChannelsGlobal; const detailsConfigured = initialChannelDetailsGlobal; if (isConfigDone && numConfigured > 0) { count = numConfigured; numChannelsInput.value = count; numChannelsInput.readOnly = true; numChannelsInput.style.backgroundColor = "#e9e9e9"; numChannelsInput.style.cursor = "not-allowed"; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = true; } else { numChannelsInput.readOnly = false; numChannelsInput.style.backgroundColor = ""; numChannelsInput.style.cursor = ""; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = false; } channelDetailsContainer.innerHTML = ''; if (isNaN(count) || count < 1 || count > 6) { count = Math.max(1, Math.min(6, (isNaN(count) ? 1 : count))); if (!isConfigDone) numChannelsInput.value = count; } for (let i = 1; i <= count; i++) { const groupDiv = document.createElement('div'); groupDiv.classList.add('settings-group'); const chLabel = document.createElement('label'); chLabel.setAttribute('for', `channel_ch_${i}`); chLabel.textContent = `채널 ${i} Ch#:`; const chInput = document.createElement('input'); chInput.type = 'text'; chInput.id = `channel_ch_${i}`; chInput.classList.add('channel-detail-input'); chInput.placeholder = '예: Low/Mid/High'; const freqLabel = document.createElement('label'); freqLabel.setAttribute('for', `channel_freq_${i}`); freqLabel.textContent = `Freq. (MHz):`; const freqInput = document.createElement('input'); freqInput.type = 'number'; freqInput.id = `channel_freq_${i}`; freqInput.classList.add('channel-detail-input'); freqInput.placeholder = '예: 1750'; freqInput.step = 'any'; if (isConfigDone) { chInput.value = detailsConfigured[i-1]?.ch || ''; freqInput.value = detailsConfigured[i-1]?.freq || ''; chInput.readOnly = true; freqInput.readOnly = true; } else { chInput.addEventListener('input', refreshPreviewRowsAndFilter); freqInput.addEventListener('input', refreshPreviewRowsAndFilter); } groupDiv.appendChild(chLabel); groupDiv.appendChild(chInput); groupDiv.appendChild(freqLabel); groupDiv.appendChild(freqInput); channelDetailsContainer.appendChild(groupDiv); } }
+        function getGeneratedRowClass(conditionValue) { return `generated-for-${conditionValue.replace(/\s+/g, '-').toLowerCase()}`; }
+        function removeGeneratedRowsByCondition(conditionValue) { const specificRowClass = getGeneratedRowClass(conditionValue); const rowsToRemove = tableBody.querySelectorAll(`tr.${specificRowClass}`); rowsToRemove.forEach(row => row.remove());}
+        function generatePreviewRowsForCondition(conditionValue) {
+            if (sarDataExistsGlobal) return; // 이미 데이터가 있으면 미리보기 행을 생성하지 않음
+
+            const specificRowClass = getGeneratedRowClass(conditionValue);
+            removeGeneratedRowsByCondition(conditionValue); // 기존 미리보기 행 삭제
+
+            let currentNumChannels = parseInt(numChannelsInput.value);
+            if (isChannelConfigDoneGlobal && configuredNumChannelsGlobal > 0) {
+                currentNumChannels = configuredNumChannelsGlobal;
+            }
+            if (isNaN(currentNumChannels) || currentNumChannels < 1) currentNumChannels = 0;
+
+            const channelInfoFromInputs = [];
+            for (let i = 1; i <= currentNumChannels; i++) {
+                const chVal = document.getElementById(`channel_ch_${i}`)?.value || '';
+                const freqVal = document.getElementById(`channel_freq_${i}`)?.value || '';
+                channelInfoFromInputs.push({ ch: chVal, freq: freqVal });
+            }
+
+            if (currentNumChannels === 0 && isChannelConfigDoneGlobal) {
+                channelInfoFromInputs.push({ ch: 'N/A', freq: 'N/A' }); // 채널 설정은 완료되었으나 채널 수가 0 또는 N/A인 경우
+                currentNumChannels = 1; // 하나의 "N/A" 행을 위해
+            } else if (currentNumChannels === 0 && !isChannelConfigDoneGlobal) {
+                channelInfoFromInputs.push({ ch: '', freq: '' }); // 채널 설정 미완료 시 빈 행 하나를 위해
+                currentNumChannels = 1;
+            }
+
+            let dsiValue = document.getElementById(`dsi_input_${conditionToDsiInputIdSuffix[conditionValue]}`)?.value || '';
+            const testPositions = conditionTestPositions[conditionValue] || [];
+
+            for (let j = 0; j < testPositions.length; j++) {
+                const currentTestPosition = testPositions[j];
+
+                for (let channelIndex = 0; channelIndex < currentNumChannels; channelIndex++) {
+                    const currentChannelData = channelInfoFromInputs[channelIndex];
+
+                    // ▼▼▼ 행 생성을 위한 함수 정의 (중복 호출을 위해) ▼▼▼
+                    const createRowInstance = () => {
+                        const newRow = document.createElement('tr');
+                        newRow.classList.add('generated-row', specificRowClass);
+                        const bgColorClass = positionCssClasses[currentTestPosition];
+                        if (bgColorClass) newRow.classList.add(bgColorClass);
+
+                        let distValueForRow = '';
+                        let distIsReadonlyInRow = false;
+                        if (conditionValue === "Head") {
+                            distValueForRow = "0";
+                            distIsReadonlyInRow = true;
+                        } else if (conditionValue === "Hand SAR") {
+                            if (currentTestPosition === "Rear") {
+                                distValueForRow = document.getElementById('dist_input_handsar_rear')?.value || "";
+                            } else {
+                                distValueForRow = "0";
+                                distIsReadonlyInRow = true;
+                            }
+                        } else if (conditionToDistInputIdSuffix[conditionValue]) {
+                            distValueForRow = document.getElementById(`dist_input_${conditionToDistInputIdSuffix[conditionValue]}`)?.value || "";
+                        }
+
+                        newRow.appendChild(createCell('date'));
+                        newRow.appendChild(createCell('date'));
+                        newRow.appendChild(createCell('select', { value: '' }, defaultTestedByOptions));
+                        newRow.appendChild(createCell('text', { placeholder: 'SN...' }));
+                        newRow.appendChild(createCell('select', { value: '' }, defaultSarLabOptions));
+                        newRow.appendChild(createCell('text', { value: conditionValue, readonly: true, 'data-rf-condition': conditionValue }));
+                        newRow.appendChild(createCell('text', { placeholder: 'Mode...' }));
+                        newRow.appendChild(createCell('text', { value: dsiValue, placeholder: 'DSI...', readonly: true }));
+                        newRow.appendChild(createCell('number', { value: distValueForRow, step: 'any', placeholder: 'mm', readonly: distIsReadonlyInRow }));
+                        newRow.appendChild(createCell('text', { value: currentTestPosition, readonly: true, 'data-test-position': currentTestPosition }));
+                        newRow.appendChild(createCell('text', { value: currentChannelData.ch, placeholder: 'Ch#', readonly: isChannelConfigDoneGlobal }));
+                        newRow.appendChild(createCell('number', { value: currentChannelData.freq, step: 'any', placeholder: 'MHz', readonly: isChannelConfigDoneGlobal }));
+                        
+                        // LTE와 NR 기술에만 RB, RB Position 컬럼 추가 (이미 템플릿 HTML에 th가 추가되었다고 가정)
+                        if (currentTechnology === 'LTE' || currentTechnology === 'NR') {
+                            newRow.appendChild(createCell('text', { placeholder: 'RB', 'aria-label': 'RB' }));
+                            newRow.appendChild(createCell('text', { placeholder: 'RB Pos', 'aria-label': 'RB Position' }));
+                        }
+                        
+                        newRow.appendChild(createCell('text', { placeholder: 'Limit' }));
+                        newRow.appendChild(createCell('text', { placeholder: 'Meas.' , value: ''}));
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000'})); // 1-g SAR Meas
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000'})); // 1-g SAR Scaled
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000'})); // 10-g SAR Meas
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000'})); // 10-g SAR Scaled
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm'})); // Step Size
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm'})); // Dis 3dB Peak
+                        newRow.appendChild(createCell('number', { step: 'any', placeholder: '%' }));  // Z-axis Ratio
+                        tableBody.appendChild(newRow);
+                    };
+                    // ▲▲▲ 행 생성을 위한 함수 정의 끝 ▲▲▲
+
+                    // ▼▼▼ 기술 방식에 따라 행 생성 호출 ▼▼▼
+                    if (currentTechnology === 'LTE' || currentTechnology === 'NR') {
+                        createRowInstance(); // 첫 번째 행 생성
+                        createRowInstance(); // 두 번째 행 생성 (동일 채널에 대해)
+                    } else {
+                        createRowInstance(); // 다른 기술은 한 번만 생성
+                    }
+                    // ▲▲▲ 기술 방식에 따라 행 생성 호출 끝 ▲▲▲
+                }
+            }
+            filterTable(); // 미리보기 행 생성 후 필터 적용
+        }
+        function filterTable() { /* ... (이전과 동일) ... */ console.log('DEBUG: filterTable() called.'); const activeRfConditions = Array.from(rfConditionFilterCheckboxes).filter(cb => cb.checked).map(cb => cb.value); const activeTestPositions = Array.from(testPositionFilterCheckboxes).filter(cb => cb.checked).map(cb => cb.value); const rows = tableBody.querySelectorAll('tr'); let visibleRowCount = 0; rows.forEach(row => { const cells = row.cells; if (cells.length < 10) { row.style.display = 'none'; return; } const rfInput = cells[5].querySelector('input'); const posInput = cells[9].querySelector('input'); const rowRfExposure = rfInput ? rfInput.value : ''; const rowTestPosition = posInput ? posInput.value : ''; let rfMatch = activeRfConditions.length === 0 || activeRfConditions.includes(rowRfExposure); let positionMatch = activeTestPositions.length === 0 || activeTestPositions.includes(rowTestPosition); if (activeRfConditions.length > 0 && !activeRfConditions.includes(rowRfExposure)) rfMatch = false; if (activeTestPositions.length > 0 && !activeTestPositions.includes(rowTestPosition)) positionMatch = false; if (rfMatch && positionMatch) { row.style.display = ''; visibleRowCount++; } else { row.style.display = 'none'; } }); console.log(`DEBUG: filterTable() finished. Visible rows: ${visibleRowCount}`); }
+        function populateTableWithInitialData(data) { /* ... (이전과 동일) ... */ console.log(`DEBUG: populateTableWithInitialData called. Data count: ${data ? data.length : 0}`); if (!data || !Array.isArray(data)) { tableBody.innerHTML = ''; return; } tableBody.innerHTML = ''; data.forEach((rowData) => { const newRow = document.createElement('tr'); if(rowData.id) newRow.dataset.dbId = rowData.id; const rfCondition = rowData.rf_exposure_condition || ''; const testPosition = rowData.test_position || ''; const bgColorClass = positionCssClasses[testPosition]; if (bgColorClass) newRow.classList.add(bgColorClass); let dsiIsReadonly = true; let distIsReadonly = false; if (rfCondition === "Head") distIsReadonly = true; else if (rfCondition === "Hand SAR" && testPosition !== "Rear") distIsReadonly = true; let chIsReadonly = true; let freqIsReadonly = true; newRow.appendChild(createCell('date', { value: rowData.system_check_date || '' })); newRow.appendChild(createCell('date', { value: rowData.test_date || '' })); newRow.appendChild(createCell('select', { value: rowData.tested_by || '' }, defaultTestedByOptions)); newRow.appendChild(createCell('text', { value: rowData.sample_no || '', placeholder: 'SN...' })); newRow.appendChild(createCell('select', { value: rowData.sar_lab || '' }, defaultSarLabOptions)); newRow.appendChild(createCell('text', { value: rfCondition, readonly: true, 'data-rf-condition': rfCondition })); newRow.appendChild(createCell('text', { value: rowData.mode || '', placeholder: 'Mode...' })); newRow.appendChild(createCell('text', { value: rowData.dsi || '', placeholder: 'DSI...', readonly: dsiIsReadonly })); newRow.appendChild(createCell('number', { value: rowData.distance_mm !== null ? rowData.distance_mm : '', step: 'any', placeholder: 'mm', readonly: distIsReadonly })); newRow.appendChild(createCell('text', { value: testPosition, readonly: true, 'data-test-position': testPosition })); newRow.appendChild(createCell('text', { value: rowData.channel || '', placeholder: 'Ch#', readonly: chIsReadonly })); newRow.appendChild(createCell('number', { value: rowData.frequency_mhz !== null ? rowData.frequency_mhz : '', step: 'any', placeholder: 'MHz', readonly: freqIsReadonly })); newRow.appendChild(createCell('text', { value: rowData.rb || '', placeholder: 'RB', 'aria-label': 'RB' })); newRow.appendChild(createCell('text', { value: rowData.rb_position || '', placeholder: 'RB Pos', 'aria-label': 'RB Position' })); newRow.appendChild(createCell('text', { value: rowData.tune_up_limit || '', placeholder: 'Limit' })); newRow.appendChild(createCell('text', { value: rowData.meas_power || '', placeholder: 'Meas.' })); newRow.appendChild(createCell('number', { value: rowData.measured_sar_1g !== null ? rowData.measured_sar_1g : '', step: 'any' })); newRow.appendChild(createCell('number', { value: rowData.scaled_sar_1g !== null ? rowData.scaled_sar_1g : '', step: 'any' })); newRow.appendChild(createCell('number', { value: rowData.measured_sar_10g !== null ? rowData.measured_sar_10g : '', step: 'any' })); newRow.appendChild(createCell('number', { value: rowData.scaled_sar_10g !== null ? rowData.scaled_sar_10g : '', step: 'any' })); newRow.appendChild(createCell('number', { value: rowData.step_size_mm !== null ? rowData.step_size_mm : '', step: 'any', placeholder: 'mm'})); newRow.appendChild(createCell('number', { value: rowData.dis_3db_peak_mm !== null ? rowData.dis_3db_peak_mm : '', step: 'any', placeholder: 'mm'})); newRow.appendChild(createCell('number', { value: rowData.z_axis_ratio_percent !== null ? rowData.z_axis_ratio_percent : '', step: 'any', placeholder: '%' })); tableBody.appendChild(newRow); }); }
+        async function loadAndPopulateData() { /* ... (이전과 동일) ... */ console.log(`DEBUG: loadAndPopulateData. isChannelConfigDone: ${isChannelConfigDoneGlobal}, sarDataExists: ${sarDataExistsGlobal}, initialSarEntries count: ${initialSarEntries.length}`); if (sarDataExistsGlobal) { if (initialSarEntries && initialSarEntries.length > 0) { populateTableWithInitialData(initialSarEntries); } else { if (!loadDataUrl || loadDataUrl.includes('#ERROR')) { populateTableWithInitialData([]); return; } try { const r = await fetch(loadDataUrl); if(!r.ok) throw Error(r.statusText); const d = await r.json(); if(d.status==='success' && d.data) populateTableWithInitialData(d.data); else populateTableWithInitialData([]); } catch(e){ console.error(e); populateTableWithInitialData([]);} } } else { tableBody.innerHTML = ''; if (isChannelConfigDoneGlobal) { rfConditionFilterCheckboxes.forEach(cb => { if (cb.checked) { generatePreviewRowsForCondition(cb.value); } }); } else { rfConditionFilterCheckboxes.forEach(cb => { if (cb.checked) { generatePreviewRowsForCondition(cb.value); } }); } } }
+
+        // ★★★ addSingleDataRow 함수 정의 (채널 선택 기능 포함) ★★★
+        function addSingleDataRow() {
+            console.log("DEBUG: addSingleDataRow called.");
+            if (!isChannelConfigDoneGlobal || !initialChannelDetailsGlobal || initialChannelDetailsGlobal.length === 0) {
+                alert("채널 정보가 설정되지 않았거나 유효하지 않습니다. 채널 설정을 확인해주세요."); return;
+            }
+            const firstCheckedRfCheckbox = Array.from(rfConditionFilterCheckboxes).find(cb => cb.checked);
+            if (!firstCheckedRfCheckbox) { alert("새로운 행에 적용할 RF Exposure Condition을 필터 영역에서 하나 이상 선택(체크)해주세요."); return; }
+            
+            const selectedRfCondition = firstCheckedRfCheckbox.value;
+            let dsiValue = '', distValueForRow = '', distIsReadonlyInRow = false;
+
+            if (conditionToDsiInputIdSuffix[selectedRfCondition]) {
+                dsiValue = document.getElementById(`dsi_input_${conditionToDsiInputIdSuffix[selectedRfCondition]}`)?.value || '';
+            }
+
+            if (selectedRfCondition === "Head") {
+                distValueForRow = document.getElementById('dist_input_head')?.value || "0";
+                distIsReadonlyInRow = true;
+            } else if (selectedRfCondition === "Hand SAR") {
+                const testPosForHandSar = Array.from(testPositionFilterCheckboxes).find(cb => cb.checked && conditionTestPositions[selectedRfCondition]?.includes(cb.value))?.value || conditionTestPositions[selectedRfCondition]?.[0] || "";
+                if (testPosForHandSar === "Rear") {
+                    distValueForRow = document.getElementById('dist_input_handsar_rear')?.value || "";
+                    distIsReadonlyInRow = false; 
+                } else {
+                    distValueForRow = document.getElementById('dist_input_handsar')?.value || "0";
+                    distIsReadonlyInRow = true;
+                }
+            } else if (conditionToDistInputIdSuffix[selectedRfCondition]) { 
+                distValueForRow = document.getElementById(`dist_input_${conditionToDistInputIdSuffix[selectedRfCondition]}`)?.value || "";
+            }
+
+            const testPositions = conditionTestPositions[selectedRfCondition] || [];
+            const firstValidTestPos = Array.from(testPositionFilterCheckboxes).find(cb => cb.checked && testPositions.includes(cb.value))?.value || (testPositions.length > 0 ? testPositions[0] : "");
+            if (!firstValidTestPos) {
+                alert(`${selectedRfCondition}에 유효한 Test Position이 선택/설정되지 않았습니다.`); return;
+            }
+
+            const newRow = document.createElement('tr');
+            newRow.classList.add('newly-added-row');
+            const bgColor = positionCssClasses[firstValidTestPos];
+            if (bgColor) newRow.classList.add(bgColor);
+
+            newRow.appendChild(createCell('date'));
+            newRow.appendChild(createCell('date'));
+            newRow.appendChild(createCell('select', { value: '' }, defaultTestedByOptions));
+            newRow.appendChild(createCell('text', { placeholder: 'SN...' }));
+            newRow.appendChild(createCell('select', { value: '' }, defaultSarLabOptions));
+            newRow.appendChild(createCell('text', { value: selectedRfCondition, readonly: true, 'data-rf-condition': selectedRfCondition }));
+            newRow.appendChild(createCell('text', { placeholder: 'Mode...' }));
+            newRow.appendChild(createCell('text', { value: dsiValue, readonly: true }));
+            newRow.appendChild(createCell('number', { value: distValueForRow, step: 'any', placeholder: 'mm', readonly: distIsReadonlyInRow }));
+            newRow.appendChild(createCell('text', { value: firstValidTestPos, readonly: true, 'data-test-position': firstValidTestPos }));
+
+            const chOptions = initialChannelDetailsGlobal.map((detail, index) => ({ value: index.toString(), text: detail.ch }));
+            const chCell = createCell('select', { 'aria-label': 'Channel Selection' }, chOptions);
+            const chSelectInCell = chCell.querySelector('select');
+            newRow.appendChild(chCell);
+
+            const freqCellAttributes = { value: initialChannelDetailsGlobal.length > 0 ? initialChannelDetailsGlobal[0].freq : '', step: 'any', placeholder: 'MHz', readonly: true };
+            const freqCell = createCell('number', freqCellAttributes);
+            const freqInputInCell = freqCell.querySelector('input');
+            newRow.appendChild(freqCell); // Freq. (MHz) 셀
+
+            // ▼▼▼ 새로운 RB 및 RB Position 컬럼 셀 추가 ▼▼▼
+            newRow.appendChild(createCell('text', { placeholder: 'RB', 'aria-label': 'RB' }));
+            newRow.appendChild(createCell('text', { placeholder: 'RB Pos', 'aria-label': 'RB Position' }));
+            // ▲▲▲ 새로운 RB 및 RB Position 컬럼 셀 추가 ▲▲▲
+
+            if (chSelectInCell && freqInputInCell) {
+                chSelectInCell.addEventListener('change', function() {
+                    const selectedChannelIndex = parseInt(this.value);
+                    if (initialChannelDetailsGlobal[selectedChannelIndex]) {
+                        freqInputInCell.value = initialChannelDetailsGlobal[selectedChannelIndex].freq;
+                    } else {
+                        freqInputInCell.value = '';
+                    }
+                });
+            }
+            
+            newRow.appendChild(createCell('text', { placeholder: 'Limit' }));
+            newRow.appendChild(createCell('text', { placeholder: 'Meas.', value: '' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: '0.000' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: 'mm' }));
+            newRow.appendChild(createCell('number', { step: 'any', placeholder: '%' }));
+
+            tableBody.appendChild(newRow);
+            newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            console.log("DEBUG: A new specific data row added to table (with channel select).");
+        }
+        // ★★★ addSingleDataRow 함수 정의 끝 ★★★
+
+
+        // 이벤트 리스너들
+        rfConditionFilterCheckboxes.forEach(checkbox => { checkbox.addEventListener('change', function() { if (sarDataExistsGlobal) { /* 데이터 있으면 필터만 */ } else { if (this.checked) generatePreviewRowsForCondition(this.value); else removeGeneratedRowsByCondition(this.value); } filterTable(); }); });
+        testPositionFilterCheckboxes.forEach(checkbox => { checkbox.addEventListener('change', function() { filterTable(); }); });
+        numChannelsInput.addEventListener('input', function() { if (isChannelConfigDoneGlobal) { this.value = configuredNumChannelsGlobal; return; } updateChannelInputFields(); if (!sarDataExistsGlobal) refreshPreviewRowsAndFilter(); });
+        
+        const allNonChannelSettingsInputs = document.querySelectorAll('.settings-area input[type="text"].dsi-input, .settings-area input[type="number"].dist-input:not([readonly])');
+        allNonChannelSettingsInputs.forEach(input => { 
+            input.addEventListener('input', function() { 
+                if (!sarDataExistsGlobal && !isChannelConfigDoneGlobal) { 
+                    refreshPreviewRowsAndFilter();
+                }
+            }); 
+        });
+
+        const masterDsiInputs = document.querySelectorAll('input.master-dsi-input'); 
+        masterDsiInputs.forEach(masterInput => { masterInput.addEventListener('input', function() { const changedDsiMasterInputId = this.id; const newDsiValue = this.value; let targetRfCondition = null; for (const conditionKey in conditionToDsiInputIdSuffix) { if (`dsi_input_${conditionToDsiInputIdSuffix[conditionKey]}` === changedDsiMasterInputId) { targetRfCondition = conditionKey; break; } } if (targetRfCondition) { tableBody.querySelectorAll('tr').forEach(row => { if (row.style.display === 'none') return; const cells = row.cells; if (cells.length > 7) { const rowRfCondCellInput = cells[5].querySelector('input'); const rowDsiCellInput = cells[7].querySelector('input'); if (rowRfCondCellInput && rowDsiCellInput && rowRfCondCellInput.value === targetRfCondition) { rowDsiCellInput.value = newDsiValue; } } }); } }); });
+        const masterDistInputs = document.querySelectorAll('input.dist-input:not([readonly]), input#dist_input_handsar_rear.master-dist-input');
+        masterDistInputs.forEach(masterInput => { masterInput.addEventListener('input', function() { const changedDistMasterInputId = this.id; const newDistValue = this.value; tableBody.querySelectorAll('tr').forEach(row => { if (row.style.display === 'none') return; const cells = row.cells; if (cells.length > 9) { const rowRfCondCellInput = cells[5].querySelector('input'); const rowTestPosCellInput = cells[9].querySelector('input'); const rowDistCellInput = cells[8].querySelector('input'); if (rowRfCondCellInput && rowTestPosCellInput && rowDistCellInput) { const rowRfCondition = rowRfCondCellInput.value; const rowTestPosition = rowTestPosCellInput.value; let updateThisRow = false; let valueToUpdateWith = newDistValue; if (rowRfCondition === "Head") {} else if (rowRfCondition === "Hand SAR") { if (rowTestPosition === "Rear" && changedDistMasterInputId === 'dist_input_handsar_rear') { updateThisRow = true; } else if (rowTestPosition !== "Rear" && document.getElementById('dist_input_handsar')?.readOnly && changedDistMasterInputId === 'dist_input_handsar') { rowDistCellInput.value = document.getElementById('dist_input_handsar')?.value || "0"; } } else { const expectedMasterInputId = `dist_input_${conditionToDistInputIdSuffix[rowRfCondition]}`; if (changedDistMasterInputId === expectedMasterInputId) { updateThisRow = true; } } if (updateThisRow) { rowDistCellInput.value = valueToUpdateWith; } } } }); }); });
+
+        if (saveChannelConfigBtn) { saveChannelConfigBtn.addEventListener('click', async function() { /* ... (이전과 동일) ... */ console.log("DEBUG: '채널 설정 저장' 버튼 클릭됨"); if (isChannelConfigDoneGlobal) { alert("채널 설정은 이미 저장되어 변경할 수 없습니다."); return; } const numChannels = parseInt(numChannelsInput.value); const channelDetails = []; let allFilled = true; for(let i=1; i<=numChannels; i++){const ch=document.getElementById(`channel_ch_${i}`)?.value.trim(); const fr=document.getElementById(`channel_freq_${i}`)?.value.trim(); if(!ch || !fr){allFilled=false; break;} channelDetails.push({ch,freq:fr});} if(!allFilled){alert("모든 채널 정보를 입력하세요."); return;} const payload = {num_channels:numChannels, channel_details:channelDetails}; try {const res = await fetch(saveChannelConfigUrl, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(payload)}); const result=await res.json(); if(res.ok && result.status === 'success'){isChannelConfigDoneGlobal=true; configuredNumChannelsGlobal=result.configured_channel_count || numChannels; initialChannelDetailsGlobal=result.channel_details || channelDetails; updateChannelInputFields(); if(!sarDataExistsGlobal){tableBody.innerHTML=''; rfConditionFilterCheckboxes.forEach(cb=>{if(cb.checked)generatePreviewRowsForCondition(cb.value);});} filterTable(); alert(result.message || '채널 설정 저장 완료');} else {alert(`채널 설정 저장 실패: ${result.message}`);}} catch(err){alert('채널 설정 저장 중 오류'); console.error(err);}} ); }
+        
+        if (saveTableDataBtn) { 
+            saveTableDataBtn.addEventListener('click', async function() { 
+                console.log("DEBUG: '테이블 데이터 저장' 버튼 클릭됨");
+                if(!isChannelConfigDoneGlobal){ alert("채널 설정을 먼저 저장하세요."); return; }
+                const rowsToSave = [];
+                const tableRows = tableBody.querySelectorAll('tr');
+                
+                tableRows.forEach(row => {
+                    if (row.style.display === 'none') return; 
+                    const cells = row.cells;
+                    if (cells.length < 23) return;
+
+                    const rfExposureConditionOfRow = cells[5].querySelector('input')?.value || '';
+                    const testPositionOfRow = cells[9].querySelector('input')?.value || '';
+                    let currentMasterDsiValue = '';
+                    if (rfExposureConditionOfRow && conditionToDsiInputIdSuffix[rfExposureConditionOfRow]) {
+                        const dsiInputIdSuffix = conditionToDsiInputIdSuffix[rfExposureConditionOfRow];
+                        const masterDsiInputElement = document.getElementById(`dsi_input_${dsiInputIdSuffix}`);
+                        if (masterDsiInputElement) currentMasterDsiValue = masterDsiInputElement.value;
+                    }
+                    let currentMasterDistValue = '';
+                    if (rfExposureConditionOfRow === "Head") { currentMasterDistValue = document.getElementById('dist_input_head')?.value || "0"; } 
+                    else if (rfExposureConditionOfRow === "Hand SAR") { if (testPositionOfRow === "Rear") { currentMasterDistValue = document.getElementById('dist_input_handsar_rear')?.value || ""; } else { currentMasterDistValue = document.getElementById('dist_input_handsar')?.value || "0"; } } 
+                    else if (conditionToDistInputIdSuffix[rfExposureConditionOfRow]) { const distInputIdSuffix = conditionToDistInputIdSuffix[rfExposureConditionOfRow]; const masterDistInputElement = document.getElementById(`dist_input_${distInputIdSuffix}`); if (masterDistInputElement) currentMasterDistValue = masterDistInputElement.value; }
+
+                    const chCellElement = cells[10].firstElementChild; 
+                    let chNameToSave = '';
+                    let freqToSave = null; 
+                    const freqCellElement = cells[11].querySelector('input');
+
+                    if (chCellElement) {
+                        if (chCellElement.tagName === 'SELECT') { 
+                            const selectedIndex = parseInt(chCellElement.value);
+                            if (initialChannelDetailsGlobal[selectedIndex]) {
+                                chNameToSave = initialChannelDetailsGlobal[selectedIndex].ch;
+                                freqToSave = initialChannelDetailsGlobal[selectedIndex].freq; 
+                            }
+                        } else { 
+                            chNameToSave = chCellElement.value;
+                            if (freqCellElement) freqToSave = freqCellElement.value; 
+                        }
+                    } else { 
+                         if (freqCellElement) freqToSave = freqCellElement.value;
+                    }
+
+                    const rowData = {
+                        id: row.dataset.dbId || null, 
+                        system_check_date: cells[0].querySelector('input')?.value || null, 
+                        test_date: cells[1].querySelector('input')?.value || null, 
+                        tested_by: cells[2].querySelector('select')?.value || '', 
+                        sample_no: cells[3].querySelector('input')?.value || '', 
+                        sar_lab: cells[4].querySelector('select')?.value || '', 
+                        rf_exposure_condition: rfExposureConditionOfRow, 
+                        mode: cells[6].querySelector('input')?.value || '', 
+                        dsi: currentMasterDsiValue, distance_mm: currentMasterDistValue, 
+                        test_position: testPositionOfRow, channel: chNameToSave, 
+                        frequency_mhz: freqToSave, tune_up_limit: cells[12].querySelector('input')?.value || '', 
+
+                        rb: cells[12].querySelector('input')?.value || '', // RB (새로운 필드명 예시: rb)
+                        rb_position: cells[13].querySelector('input')?.value || '', // RB Position (새로운 필드명 예시: rb_position)
+
+                        tune_up_limit: cells[14].querySelector('input')?.value || '', // 기존 인덱스 12에서 14로 변경
+                        meas_power: cells[15].querySelector('input')?.value || '',    // 기존 인덱스 13에서 15로 변경
+                        measured_sar_1g: cells[16].querySelector('input')?.value || null, // ... 이하 인덱스 2씩 증가
+                        scaled_sar_1g: cells[17].querySelector('input')?.value || null,
+                        measured_sar_10g: cells[18].querySelector('input')?.value || null,
+                        scaled_sar_10g: cells[19].querySelector('input')?.value || null,
+                        step_size_mm: cells[20].querySelector('input')?.value || null,
+                        dis_3db_peak_mm: cells[21].querySelector('input')?.value || null,
+                        z_axis_ratio_percent: cells[22].querySelector('input')?.value || null
+                    };
+                    Object.keys(rowData).forEach(key => { if (rowData[key] === '') rowData[key] = null; if (['distance_mm', 'frequency_mhz', 'measured_sar_1g', 'scaled_sar_1g', 'measured_sar_10g', 'scaled_sar_10g', 'step_size_mm', 'dis_3db_peak_mm', 'z_axis_ratio_percent'].includes(key) && rowData[key] !== null) { try { const parsedNum = parseFloat(rowData[key]); rowData[key] = isNaN(parsedNum) ? null : parsedNum; } catch (e) { rowData[key] = null; } } });
+                    rowsToSave.push(rowData);
+                });
+
+                if (rowsToSave.length === 0) { alert("저장할 데이터가 없습니다."); return; }
+                const payload = { rows: rowsToSave };
+                console.log(`DEBUG: Saving ${rowsToSave.length} table data rows. First row Ch: ${rowsToSave.length > 0 ? rowsToSave[0].channel : 'N/A'}, Freq: ${rowsToSave.length > 0 ? rowsToSave[0].frequency_mhz : 'N/A'}`);
+                try { 
+                    const res = await fetch(saveDataUrl,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify(payload)}); 
+                    const result = await res.json(); 
+                    if (res.ok && result.status === 'success') { 
+                        sarDataExistsGlobal = true; if(addDataRowBtn) addDataRowBtn.style.display = 'inline-block'; 
+                        alert(result.message || '데이터 저장 성공'); 
+                        await loadAndPopulateData(); 
+                    } else { alert(`데이터 저장 실패: ${result.message || '서버 응답 오류'}`); }
+                } catch (err) { alert('데이터 저장 중 통신 오류'); console.error(err); }
+            }); 
+        }
+        
+        // ★★★ addDataRowBtn 이벤트 리스너에서 addSingleDataRow 호출 ★★★
+        if (addDataRowBtn) { 
+            addDataRowBtn.addEventListener('click', function() { 
+                console.log('DEBUG: "특정 데이터 행 추가" (addDataRowBtn) CLICKED!'); 
+                if (!isChannelConfigDoneGlobal) { 
+                    alert("먼저 채널 설정을 완료하고 저장해주세요."); 
+                    return; 
+                } 
+                addSingleDataRow(); // 함수 호출
+            }); 
+        }
+        
+        console.log('DEBUG: ---- Initializing Page ----');
+        updateChannelInputFields(); 
+        loadAndPopulateData().finally(() => { 
+            console.log('DEBUG: Initial data load process finished (finally block). Updating UI and applying filters.');
+            updateChannelInputFields(); 
+            filterTable();
+            console.log('DEBUG: ---- Page Initialization Complete ----');
+        }); 
+    }); // Closes DOMContentLoaded
+    </script>
+</body>
+</html>
