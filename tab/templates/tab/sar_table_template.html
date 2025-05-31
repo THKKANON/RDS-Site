@@ -6,29 +6,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ technology_type|default:"데이터" }} 데이터 입력 테이블 (기능 개선 최종)</title>
     <style>
-        /* CSS는 이전과 동일하게 유지합니다. (이전 답변들 참고) */
+        /* 기본 스타일 */
         body { font-family: "Malgun Gothic", "맑은 고딕", sans-serif; background-color: #f0f0f0; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
         .container { background-color: #ffffff; border: 1px solid #a0a0a0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 20px; width: 98%; max-width: 1800px; border-radius: 4px; }
         h1 { font-size: 1.3em; color: #333333; text-align: center; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #cccccc; padding-bottom: 10px; }
         .settings-area, .filter-area { margin-bottom: 15px; padding: 15px; border: 1px solid #d0d0d0; border-radius: 4px; background-color: #f9f9f9; }
         .filter-area legend, .settings-area legend { font-weight: bold; font-size: 1em; color: #333; padding: 0 5px; margin-bottom: 10px; }
+        
+        /* Settings Layout */
         .settings-layout { display: flex; flex-wrap: wrap; gap: 20px; }
-        .settings-column { flex: 1; min-width: 320px; display: flex; flex-direction: column; gap: 15px; }
+        .settings-column { flex: 1; min-width: 300px; /* 최소 너비 조정 */ display: flex; flex-direction: column; gap: 15px; }
         #channel-settings-column { align-items: center; }
         #channelDetailsContainer { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
+        
         .dsi-dist-layout { display: flex; flex-direction: row; gap: 20px; width: 100%; }
-        .dsi-dist-sub-column { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .dsi-dist-sub-column { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 250px; /* 각 하위 컬럼 최소 너비 */ }
         .sub-column-title { font-weight: bold; font-size: 0.9em; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
-        .settings-group { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; }
+
+        .settings-group { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; /* 기본은 줄바꿈 없음 */ }
         #numChannelsGroup, #channelDetailsContainer .settings-group { width: fit-content; }
-        .dsi-dist-sub-column .settings-group { width: 100%; }
+        /* .dsi-dist-sub-column .settings-group { width: 100%; } */ /* 이 부분은 아래에서 더 구체적으로 제어 */
+
         .settings-group label { font-weight: bold; font-size: 0.9em; margin-right: 5px; white-space: nowrap; flex-shrink: 0; text-align: left; }
         .settings-group input[type="number"], .settings-group input[type="text"] { padding: 5px; font-size: 0.9em; border: 1px solid #b0b0b0; border-radius: 3px; }
         .settings-group input[type="number"]#numChannels { width: 60px; flex-grow: 0; }
-        #channelDetailsContainer .settings-group input[type="text"].channel-detail-input, #channelDetailsContainer .settings-group input[type="number"].channel-detail-input { width: 100px; flex-grow: 0; }
-        #dsi-master-list .settings-group label { width: 180px; }
-        #dist-master-list .settings-group label { width: 220px; }
-        .dsi-dist-sub-column .settings-group input[type="text"], .dsi-dist-sub-column .settings-group input[type="number"] { width: 100px; flex-grow: 0; }
+        #channelDetailsContainer .settings-group input[type="text"].channel-detail-input, 
+        #channelDetailsContainer .settings-group input[type="number"].channel-detail-input { width: 100px; flex-grow: 0; }
+        
+        /* DSI/Dist 설정 내 레이블 및 입력 필드 스타일 */
+        .dsi-dist-sub-column .settings-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* ★ 화면 작을 때 레이블 아래로 입력 필드가 내려갈 수 있도록 wrap 허용 */
+            width: 100%;
+        }
+        .dsi-dist-sub-column .settings-group label {
+            flex-basis: 180px; /* 레이블 기본 너비 */
+            flex-shrink: 0; /* 레이블 너비 줄어들지 않게 */
+            margin-right: 10px;
+            white-space: normal; /* ★ 레이블 텍스트 길면 줄바꿈 되도록 */
+            word-break: keep-all;
+        }
+        #dist-master-list .settings-group label { /* Dist 레이블이 더 길 수 있으므로 조금 더 넓게 */
+            flex-basis: 210px;
+        }
+
+        .dsi-dist-sub-column .settings-group input[type="text"],
+        .dsi-dist-sub-column .settings-group input[type="number"] {
+            flex-grow: 1; /* 남은 공간을 채우도록 */
+            min-width: 80px; /* 최소 너비 */
+            width: auto; /* 고정 너비 대신 자동 */
+        }
+
+        /* Filter & Table & Button Styles (이전과 동일) */
         #channelDetailsContainer .channel-input-group label { font-weight: normal; font-size: 0.85em; min-width: 70px; }
         #saveChannelConfigBtn { margin-left: 10px; }
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px 15px; }
@@ -54,9 +84,12 @@
         input[type="text"], input[type="date"], input[type="number"], select { width: 100%; padding: 4px; border: 1px solid #b0b0b0; border-radius: 3px; box-sizing: border-box; font-family: inherit; font-size: 1em; background-color: #fff; text-align: center; }
         select { text-align: left; }
         input[type="date"] { text-align: left; padding: 4px 3px; }
-        input[readonly]:not(.master-dsi-input):not(.master-dist-input), 
-        input:read-only:not(.master-dsi-input):not(.master-dist-input), 
-        select[readonly], input#numChannels[readonly], 
+
+        input[readonly]:not([type="checkbox"]):not([type="radio"]):not(.master-dsi-input):not(.master-dist-input),
+        input:read-only:not([type="checkbox"]):not([type="radio"]):not(.master-dsi-input):not(.master-dist-input),
+        select[readonly], 
+        input#numChannels[readonly], /* ID가 numChannels인 input은 타입이 number일 것이므로 그대로 둠 */
+
         #channelDetailsContainer input[readonly] { 
             background-color: #e9e9e9 !important; 
             color: #555 !important;
@@ -68,6 +101,38 @@
         button { padding: 7px 12px; background-color: #0078d4; color: white; border: 1px solid #005a9e; border-radius: 3px; cursor: pointer; font-size: 0.85em; }
         button:hover { background-color: #005a9e; }
         button:disabled { background-color: #ccc; border-color: #bbb; cursor: not-allowed; }
+
+        /* ★★★ 반응형 레이아웃을 위한 미디어 쿼리 ★★★ */
+        @media (max-width: 992px) { /* 화면이 992px 이하일 때 DSI와 Dist 섹션을 세로로 쌓음 */
+            .dsi-dist-layout {
+                flex-direction: column;
+                gap: 15px; /* 세로로 쌓일 때 간격 */
+            }
+            .dsi-dist-sub-column {
+                 min-width: 100%; /* 세로로 쌓일 때 너비 100% */
+            }
+        }
+
+        @media (max-width: 576px) { /* 화면이 576px 이하일 때 레이블과 인풋을 세로로 쌓음 */
+            .settings-column { /* 전반적인 settings-column의 최소 너비도 조정 */
+                min-width: 280px;
+            }
+            .dsi-dist-sub-column .settings-group {
+                flex-direction: column;
+                align-items: flex-start; /* 왼쪽 정렬 */
+            }
+            .dsi-dist-sub-column .settings-group label {
+                flex-basis: auto; /* 너비 자동 */
+                width: 100%;
+                margin-bottom: 3px; /* 레이블과 인풋 사이 간격 */
+                margin-right: 0;
+            }
+            .dsi-dist-sub-column .settings-group input[type="text"],
+            .dsi-dist-sub-column .settings-group input[type="number"] {
+                width: 100%; /* 인풋 너비 100% */
+                min-width: 0; /* 최소 너비 제한 해제 */
+            }
+        }
     </style>
 </head>
 <body 
@@ -168,10 +233,12 @@
     </script>
 
     <script>
+    // JavaScript 코드는 이전 답변의 전체 수정본과 동일하게 유지합니다.
+    // (addSingleDataRow 함수 정의 포함, DSI/Dist 실시간 업데이트 및 저장 로직 포함)
+    // ... (이전 답변의 JavaScript 전체를 여기에 복사) ...
     document.addEventListener('DOMContentLoaded', function () {
         console.log('DEBUG: DOMContentLoaded event fired.');
 
-        // DOM 요소들 (이전과 동일)
         const numChannelsInput = document.getElementById('numChannels');
         const saveChannelConfigBtn = document.getElementById('saveChannelConfigBtn');
         const channelDetailsContainer = document.getElementById('channelDetailsContainer');
@@ -181,7 +248,6 @@
         const saveTableDataBtn = document.getElementById('saveTableDataBtn'); 
         const addDataRowBtn = document.getElementById('addDataRowBtn'); 
 
-        // 전역 변수들 (이전과 동일)
         let currentTechnology = '';
         let loadDataUrl = '';
         let saveDataUrl = '';
@@ -192,12 +258,10 @@
         let sarDataExistsGlobal = false; 
         let initialSarEntries = [];
 
-        // JSON 파싱 헬퍼 함수 (이전과 동일)
         function getJsonFromScriptTag(elementId) { 
             const element = document.getElementById(elementId); if (!element) { console.warn(`DEBUG: Element with ID '${elementId}' NOT FOUND.`); return null; } let jsonString = null; if (element.textContent) { jsonString = element.textContent.trim(); } if (!jsonString || jsonString === "" || jsonString.toLowerCase() === "null") { /*console.log(`DEBUG: No valid content in '${elementId}' (from textContent).`);*/ return null; } if (jsonString.startsWith("<script")) { console.warn(`DEBUG: Content of '${elementId}' includes <script> tags. Trying REGEX.`); const match = jsonString.match(/{.*}/s) || jsonString.match(/\[.*\]/s); if (match && match[0]) { jsonString = match[0]; } else { console.error(`DEBUG: REGEX failed for '${elementId}'.`); return null; } } try { return JSON.parse(jsonString); } catch (e) { console.error(`DEBUG: Error parsing JSON from '${elementId}':`, e, "Attempted:", jsonString.substring(0,100)+"..."); return null; }
         }
 
-        // 페이지 컨텍스트 및 상태 로드 (이전과 동일)
         console.log('DEBUG: Attempting to load page context from body data attributes.');
         const bodyDataset = document.body.dataset;
         if (bodyDataset.technologyType && bodyDataset.technologyType.trim() !== '' && 
@@ -214,7 +278,6 @@
         if (sarDataExistsGlobal) { if (addDataRowBtn) addDataRowBtn.style.display = 'inline-block'; } 
         else { if (addDataRowBtn) addDataRowBtn.style.display = 'none'; }
 
-        // 상수 정의 (이전과 동일)
         const defaultTestedByOptions = [ { value: "", text: "선택하세요" }]; 
         const defaultSarLabOptions = [ { value: "", text: "선택하세요" }]; 
         defaultTestedByOptions.splice(1, 0, { value: "김성훈", text: "김성훈" }, { value: "최은지", text: "최은지" }, { value: "원정연", text: "원정연" }, { value: "강태준", text: "강태준" }, { value: "김승연", text: "김승연" }, { value: "최주연", text: "최주연" }, { value: "이학철", text: "이학철" }, { value: "김태훈", text: "김태훈" }, { value: "이규림", text: "이규림" }, { value: "김희연", text: "김희연" }, { value: "정구윤", text: "정구윤" }, { value: "김건수", text: "김건수" }, { value: "이재혁", text: "이재혁" }, { value: "김미리", text: "김미리" }, { value: "김혜원", text: "김혜원" }, { value: "김예나", text: "김예나" }, { value: "이성수", text: "이성수" } );
@@ -224,12 +287,10 @@
         const conditionToDsiInputIdSuffix = { "Head": "head", "Body-worn": "bodyworn", "Hotspot": "hotspot", "Product specific 10-g Max": "ps10gmax", "Product specific 10-g Reduce": "ps10greduce", "Hand SAR": "handsar" };
         const conditionToDistInputIdSuffix = { "Head": "head", "Body-worn": "bodyworn", "Hotspot": "hotspot", "Product specific 10-g Max": "ps10gmax", "Product specific 10-g Reduce": "ps10greduce", "Hand SAR": "handsar" };
 
-        // 헬퍼 함수들 (getCookie, createCell, refreshPreviewRowsAndFilter, updateChannelInputFields, getGeneratedRowClass, removeGeneratedRowsByCondition, generatePreviewRowsForCondition, filterTable, populateTableWithInitialData, loadAndPopulateData)
-        // ... (이전 답변의 함수 내용들을 여기에 그대로 유지) ...
         function getCookie(name) { let cookieValue = null; if (document.cookie && document.cookie !== '') { const cookies = document.cookie.split(';'); for (let i = 0; i < cookies.length; i++) { const cookie = cookies[i].trim(); if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; } } } return cookieValue; }
         function createCell(type, attributes = {}, options = []) { const td = document.createElement('td'); let inputElement; if (type === 'select') { inputElement = document.createElement('select'); options.forEach(opt => { const option = document.createElement('option'); option.value = opt.value; option.textContent = opt.text; inputElement.appendChild(option); }); } else { inputElement = document.createElement('input'); inputElement.type = type; } for (const key in attributes) { if (key === 'value') { inputElement.value = attributes[key] === null || attributes[key] === undefined ? '' : attributes[key]; } else if (key === 'readonly' || key === 'readOnly') { inputElement.readOnly = attributes[key]; } else { inputElement.setAttribute(key, attributes[key]); } } td.appendChild(inputElement); return td; }
         function refreshPreviewRowsAndFilter() { if (sarDataExistsGlobal) { filterTable(); return; } rfConditionFilterCheckboxes.forEach(cb => { if (cb.checked) { generatePreviewRowsForCondition(cb.value); } else { removeGeneratedRowsByCondition(cb.value); } }); filterTable(); }
-        function updateChannelInputFields() { console.log('DEBUG: updateChannelInputFields called. isChannelConfigDoneGlobal:', isChannelConfigDoneGlobal, 'configuredNumChannelsGlobal:', configuredNumChannelsGlobal); let count = parseInt(numChannelsInput.value); const isConfigDone = isChannelConfigDoneGlobal; const numConfigured = configuredNumChannelsGlobal; const detailsConfigured = initialChannelDetailsGlobal; if (isConfigDone && numConfigured > 0) { count = numConfigured; numChannelsInput.value = count; numChannelsInput.readOnly = true; numChannelsInput.style.backgroundColor = "#e9e9e9"; numChannelsInput.style.cursor = "not-allowed"; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = true; } else { numChannelsInput.readOnly = false; numChannelsInput.style.backgroundColor = ""; numChannelsInput.style.cursor = ""; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = false; } channelDetailsContainer.innerHTML = ''; if (isNaN(count) || count < 1 || count > 6) { count = Math.max(1, Math.min(6, (isNaN(count) ? 1 : count))); if (!isConfigDone) numChannelsInput.value = count; } for (let i = 1; i <= count; i++) { const groupDiv = document.createElement('div'); groupDiv.classList.add('settings-group'); const chLabel = document.createElement('label'); chLabel.setAttribute('for', `channel_ch_${i}`); chLabel.textContent = `채널 ${i} Ch#:`; const chInput = document.createElement('input'); chInput.type = 'text'; chInput.id = `channel_ch_${i}`; chInput.classList.add('channel-detail-input'); chInput.placeholder = '예: Low/Mid/High'; const freqLabel = document.createElement('label'); freqLabel.setAttribute('for', `channel_freq_${i}`); freqLabel.textContent = `Freq. (MHz):`; const freqInput = document.createElement('input'); freqInput.type = 'number'; freqInput.id = `channel_freq_${i}`; freqInput.classList.add('channel-detail-input'); freqInput.placeholder = '예: 1750'; freqInput.step = 'any'; if (isConfigDone) { chInput.value = detailsConfigured[i-1]?.ch || ''; freqInput.value = detailsConfigured[i-1]?.freq || ''; chInput.readOnly = true; freqInput.readOnly = true; } else { chInput.addEventListener('input', refreshPreviewRowsAndFilter); freqInput.addEventListener('input', refreshPreviewRowsAndFilter); } groupDiv.appendChild(chLabel); groupDiv.appendChild(chInput); groupDiv.appendChild(freqLabel); groupDiv.appendChild(freqInput); channelDetailsContainer.appendChild(groupDiv); } }
+        function updateChannelInputFields() { /* ... (이전과 동일) ... */ console.log('DEBUG: updateChannelInputFields called. isChannelConfigDoneGlobal:', isChannelConfigDoneGlobal, 'configuredNumChannelsGlobal:', configuredNumChannelsGlobal); let count = parseInt(numChannelsInput.value); const isConfigDone = isChannelConfigDoneGlobal; const numConfigured = configuredNumChannelsGlobal; const detailsConfigured = initialChannelDetailsGlobal; if (isConfigDone && numConfigured > 0) { count = numConfigured; numChannelsInput.value = count; numChannelsInput.readOnly = true; numChannelsInput.style.backgroundColor = "#e9e9e9"; numChannelsInput.style.cursor = "not-allowed"; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = true; } else { numChannelsInput.readOnly = false; numChannelsInput.style.backgroundColor = ""; numChannelsInput.style.cursor = ""; if (saveChannelConfigBtn) saveChannelConfigBtn.disabled = false; } channelDetailsContainer.innerHTML = ''; if (isNaN(count) || count < 1 || count > 6) { count = Math.max(1, Math.min(6, (isNaN(count) ? 1 : count))); if (!isConfigDone) numChannelsInput.value = count; } for (let i = 1; i <= count; i++) { const groupDiv = document.createElement('div'); groupDiv.classList.add('settings-group'); const chLabel = document.createElement('label'); chLabel.setAttribute('for', `channel_ch_${i}`); chLabel.textContent = `채널 ${i} Ch#:`; const chInput = document.createElement('input'); chInput.type = 'text'; chInput.id = `channel_ch_${i}`; chInput.classList.add('channel-detail-input'); chInput.placeholder = '예: Low/Mid/High'; const freqLabel = document.createElement('label'); freqLabel.setAttribute('for', `channel_freq_${i}`); freqLabel.textContent = `Freq. (MHz):`; const freqInput = document.createElement('input'); freqInput.type = 'number'; freqInput.id = `channel_freq_${i}`; freqInput.classList.add('channel-detail-input'); freqInput.placeholder = '예: 1750'; freqInput.step = 'any'; if (isConfigDone) { chInput.value = detailsConfigured[i-1]?.ch || ''; freqInput.value = detailsConfigured[i-1]?.freq || ''; chInput.readOnly = true; freqInput.readOnly = true; } else { chInput.addEventListener('input', refreshPreviewRowsAndFilter); freqInput.addEventListener('input', refreshPreviewRowsAndFilter); } groupDiv.appendChild(chLabel); groupDiv.appendChild(chInput); groupDiv.appendChild(freqLabel); groupDiv.appendChild(freqInput); channelDetailsContainer.appendChild(groupDiv); } }
         function getGeneratedRowClass(conditionValue) { return `generated-for-${conditionValue.replace(/\s+/g, '-').toLowerCase()}`; }
         function removeGeneratedRowsByCondition(conditionValue) { const specificRowClass = getGeneratedRowClass(conditionValue); const rowsToRemove = tableBody.querySelectorAll(`tr.${specificRowClass}`); rowsToRemove.forEach(row => row.remove());}
         function generatePreviewRowsForCondition(conditionValue) { if (sarDataExistsGlobal) return; const specificRowClass = getGeneratedRowClass(conditionValue); removeGeneratedRowsByCondition(conditionValue); let currentNumChannels = parseInt(numChannelsInput.value); if (isChannelConfigDoneGlobal && configuredNumChannelsGlobal > 0) currentNumChannels = configuredNumChannelsGlobal; if (isNaN(currentNumChannels) || currentNumChannels < 1) currentNumChannels=0; const channelInfoFromInputs = []; for (let i = 1; i <= currentNumChannels; i++) { const chVal = document.getElementById(`channel_ch_${i}`)?.value || ''; const freqVal = document.getElementById(`channel_freq_${i}`)?.value || ''; channelInfoFromInputs.push({ ch: chVal, freq: freqVal }); } if(currentNumChannels === 0 && isChannelConfigDoneGlobal) { channelInfoFromInputs.push({ch: 'N/A', freq: 'N/A'}); currentNumChannels = 1; } else if (currentNumChannels === 0 && !isChannelConfigDoneGlobal) { channelInfoFromInputs.push({ch: '', freq: ''}); currentNumChannels = 1; } let dsiValue = document.getElementById(`dsi_input_${conditionToDsiInputIdSuffix[conditionValue]}`)?.value || ''; const testPositions = conditionTestPositions[conditionValue] || [];
@@ -332,7 +393,7 @@
         // ★★★ addSingleDataRow 함수 정의 끝 ★★★
 
 
-        // 이벤트 리스너들 (이전과 동일한 기본 구조 유지)
+        // 이벤트 리스너들
         rfConditionFilterCheckboxes.forEach(checkbox => { checkbox.addEventListener('change', function() { if (sarDataExistsGlobal) { /* 데이터 있으면 필터만 */ } else { if (this.checked) generatePreviewRowsForCondition(this.value); else removeGeneratedRowsByCondition(this.value); } filterTable(); }); });
         testPositionFilterCheckboxes.forEach(checkbox => { checkbox.addEventListener('change', function() { filterTable(); }); });
         numChannelsInput.addEventListener('input', function() { if (isChannelConfigDoneGlobal) { this.value = configuredNumChannelsGlobal; return; } updateChannelInputFields(); if (!sarDataExistsGlobal) refreshPreviewRowsAndFilter(); });
@@ -420,7 +481,17 @@
             }); 
         }
         
-        if (addDataRowBtn) { addDataRowBtn.addEventListener('click', function() { console.log('DEBUG: "특정 데이터 행 추가" (addDataRowBtn) CLICKED!'); if (!isChannelConfigDoneGlobal) { alert("먼저 채널 설정을 완료하고 저장해주세요."); return; } addSingleDataRow(); }); }
+        // ★★★ addDataRowBtn 이벤트 리스너에서 addSingleDataRow 호출 ★★★
+        if (addDataRowBtn) { 
+            addDataRowBtn.addEventListener('click', function() { 
+                console.log('DEBUG: "특정 데이터 행 추가" (addDataRowBtn) CLICKED!'); 
+                if (!isChannelConfigDoneGlobal) { 
+                    alert("먼저 채널 설정을 완료하고 저장해주세요."); 
+                    return; 
+                } 
+                addSingleDataRow(); // 함수 호출
+            }); 
+        }
         
         console.log('DEBUG: ---- Initializing Page ----');
         updateChannelInputFields(); 
